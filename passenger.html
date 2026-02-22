@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#060e08">
+<title>CATATU — Passenger App</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --bg: #060e08; --bg2: #091209; --card: #0e1f10; --card2: #131f14;
+  --green: #00e87a; --green2: #00c462; --glow: rgba(0,232,122,.18);
+  --gold: #d4a843; --white: #eef5ef; --muted: #4e7055; --dim: #2a3d2c;
+  --border: rgba(0,232,122,.1); --border2: rgba(0,232,122,.2);
+  --red: #f04438; --blue: #3b82f6; --r: 14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden}
+
+/* ── SHELL ── */
+.app{display:none;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;position:relative}
+.app.ready{display:flex}
+
+/* ── TOPBAR ── */
+.topbar{flex-shrink:0;height:58px;background:rgba(6,14,8,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.1rem;z-index:40}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;letter-spacing:.06em;color:var(--white)}
+.brand span{color:var(--green)}
+.topbar-right{display:flex;align-items:center;gap:.7rem}
+.live-badge{display:flex;align-items:center;gap:.32rem;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:rgba(0,232,122,.08);color:var(--green);border:1px solid var(--border2);padding:.22rem .55rem;border-radius:20px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.6s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.85)}}
+.user-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--green),#007a3d);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;color:#060e08;cursor:pointer;flex-shrink:0}
+
+/* ── SCREENS ── */
+.screens{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.screens::-webkit-scrollbar{display:none}
+.screen{display:none;padding:1rem 1rem 1.5rem;min-height:100%}
+.screen.active{display:block;animation:slideUp .22s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ── BOTTOM NAV ── */
+.bnav{flex-shrink:0;background:rgba(6,14,8,.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom)}
+.bn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:.72rem .2rem;border:none;background:none;color:var(--muted);font-family:inherit;cursor:pointer;transition:color .2s;position:relative}
+.bn.active{color:var(--green)}
+.bn-ico{font-size:1.2rem;line-height:1}
+.bn-lbl{font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.bn-badge{position:absolute;top:.45rem;right:.85rem;background:var(--red);color:#fff;border-radius:10px;font-size:.52rem;font-weight:800;padding:.08rem .32rem;min-width:14px;text-align:center;line-height:1.4}
+
+/* ── TYPOGRAPHY & ATOMS ── */
+.sec-label{font-size:.66rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;display:block}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.05em;margin-bottom:.2rem}
+.page-sub{font-size:.78rem;color:var(--muted);margin-bottom:1.1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.85rem}
+.card-body{padding:1.1rem}
+.card-title{font-weight:700;font-size:.9rem;margin-bottom:.75rem;color:var(--white)}
+.divider{height:1px;background:var(--border);margin:.85rem 0}
+.chip{display:inline-flex;align-items:center;gap:.3rem;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .55rem;border-radius:20px}
+.chip-g{background:rgba(0,232,122,.1);color:var(--green);border:1px solid rgba(0,232,122,.2)}
+.chip-r{background:rgba(240,68,56,.1);color:var(--red);border:1px solid rgba(240,68,56,.2)}
+.chip-b{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.chip-gold{background:rgba(212,168,67,.1);color:var(--gold);border:1px solid rgba(212,168,67,.2)}
+.chip-dim{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.06)}
+
+/* ── INPUTS ── */
+.field{margin-bottom:.85rem}
+.field label{display:block;font-size:.64rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:.38rem}
+.field input,.field select{width:100%;background:rgba(0,232,122,.04);border:1px solid rgba(0,232,122,.12);border-radius:10px;color:var(--white);font-family:inherit;font-size:.9rem;padding:.78rem 1rem;outline:none;min-height:48px;appearance:none;transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--green);background:rgba(0,232,122,.06)}
+select option{background:var(--card)}
+
+/* ── BUTTONS ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:.45rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:.8rem;letter-spacing:.07em;text-transform:uppercase;border-radius:11px;padding:.88rem 1.4rem;cursor:pointer;border:none;transition:all .2s;min-height:50px;width:100%}
+.btn-green{background:var(--green);color:#060e08}
+.btn-green:hover{background:var(--green2);transform:translateY(-1px)}
+.btn-green:active{transform:translateY(0)}
+.btn-outline{background:transparent;color:var(--white);border:1.5px solid var(--border)}
+.btn-outline:hover{border-color:var(--green);color:var(--green)}
+.btn-ghost{background:rgba(0,232,122,.08);color:var(--green);border:1px solid rgba(0,232,122,.15)}
+.btn-sm{padding:.52rem 1rem;font-size:.7rem;min-height:38px;width:auto;border-radius:9px}
+.btn-red{background:var(--red);color:#fff}
+.btn-loading{opacity:.6;pointer-events:none;position:relative}
+.btn-loading::after{content:'';display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;margin-left:.4rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── LOGIN ── */
+#loginScreen{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;background:radial-gradient(ellipse at 40% 10%, rgba(0,232,122,.08), transparent 55%),var(--bg)}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:.08em;margin-bottom:.2rem;text-align:center}
+.login-logo span{color:var(--green)}
+.login-tagline{font-size:.8rem;color:var(--muted);margin-bottom:.5rem;text-align:center}
+.login-chips{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:1.8rem}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.8rem;width:100%;max-width:360px}
+.login-links{text-align:center;margin-top:1rem;font-size:.72rem;color:var(--muted)}
+.login-links a{color:var(--green);text-decoration:none}
+
+/* ── HOME ── */
+.hero-block{background:linear-gradient(135deg,rgba(0,232,122,.09),rgba(0,232,122,.02));border:1px solid rgba(0,232,122,.16);border-radius:var(--r);padding:1.3rem;margin-bottom:1rem;position:relative;overflow:hidden}
+.hero-block::after{content:'⚡';position:absolute;right:.8rem;top:-.4rem;font-size:5.5rem;opacity:.07;line-height:1;pointer-events:none}
+.hero-sub{font-size:.7rem;color:var(--muted);margin-bottom:.25rem;font-weight:600;letter-spacing:.06em}
+.hero-name{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;line-height:1.05}
+.hero-name em{color:var(--green);font-style:normal}
+.hero-desc{font-size:.76rem;color:var(--muted);margin-top:.4rem}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem}
+.qcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.4rem;text-align:center;user-select:none}
+.qcard:hover,.qcard:active{border-color:rgba(0,232,122,.35);background:var(--card2);transform:translateY(-1px)}
+.qcard-ico{font-size:1.6rem;line-height:1}
+.qcard-lbl{font-size:.72rem;font-weight:700;color:var(--muted)}
+.route-strip{background:var(--card);border:1px solid var(--border);border-left-width:4px;border-radius:var(--r);padding:1rem;margin-bottom:.7rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.9rem}
+.route-strip:hover{background:var(--card2);transform:translateY(-1px)}
+.rs-body{flex:1;min-width:0}
+.rs-name{font-weight:700;font-size:.9rem;margin-bottom:.15rem}
+.rs-path{font-size:.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-right{text-align:right;flex-shrink:0}
+.rs-price{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;color:var(--green);line-height:1}
+
+/* ── ROUTE LIST ── */
+.route-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.9rem;overflow:hidden;cursor:pointer;transition:all .2s}
+.route-card:hover{border-color:rgba(0,232,122,.3);background:var(--card2);transform:translateY(-1px)}
+.rc-accent{height:4px}
+.rc-body{padding:1.1rem}
+.rc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem}
+.rc-name{font-weight:800;font-size:1rem}
+.rc-price{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--green)}
+.rc-price small{font-size:.65rem;color:var(--muted);font-family:'Plus Jakarta Sans',sans-serif}
+.rc-uni{display:flex;align-items:center;gap:.5rem;margin-bottom:.55rem;font-size:.76rem;color:var(--muted)}
+.rc-uni img{width:26px;height:26px;object-fit:contain;background:#fff;border-radius:5px;padding:2px;flex-shrink:0}
+.rc-stops{font-size:.7rem;color:var(--muted);line-height:1.8;margin-bottom:.7rem;letter-spacing:.01em}
+.rc-footer{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}
+
+/* ── SEAT MAP ── */
+.bus-wrap{background:rgba(0,232,122,.025);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:.85rem}
+.bus-label{text-align:center;font-size:.66rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem}
+.seat-legend{display:flex;gap:.7rem;flex-wrap:wrap;margin-bottom:.65rem}
+.sl-item{display:flex;align-items:center;gap:.3rem;font-size:.67rem;color:var(--muted);font-weight:600}
+.sl-dot{width:14px;height:14px;border-radius:4px;border:2px solid;flex-shrink:0}
+.avail-counter{text-align:center;font-size:.78rem;color:var(--muted);margin-bottom:.65rem;font-weight:500}
+.avail-counter strong{color:var(--white);font-size:.9rem}
+.seat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem}
+.seat{aspect-ratio:1;border-radius:9px;border:2px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .16s;user-select:none;font-size:.65rem;font-weight:700;position:relative;overflow:hidden}
+.seat::before{content:'';position:absolute;inset:0;background:currentColor;opacity:.06}
+.seat.empty{border-color:rgba(0,232,122,.3);color:var(--green)}
+.seat.empty:hover,.seat.empty:active{border-color:var(--green);transform:scale(1.08);box-shadow:0 0 14px var(--glow)}
+.seat.booked{border-color:rgba(240,68,56,.22);color:rgba(240,68,56,.5);cursor:not-allowed}
+.seat.booked::before{opacity:.04}
+.seat.selected{border-color:var(--green);color:var(--green);transform:scale(1.08);box-shadow:0 0 18px var(--glow)}
+.seat.selected::before{opacity:.15}
+.seat.driver{border-color:rgba(212,168,67,.3);color:var(--gold);cursor:not-allowed;font-size:.95rem}
+.seat-num{font-size:.6rem;line-height:1}
+.seat-ico{font-size:.9rem;line-height:1}
+.selected-banner{background:rgba(0,232,122,.07);border:1px solid rgba(0,232,122,.2);border-radius:11px;padding:.9rem 1.1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem}
+.sb-left{display:flex;flex-direction:column}
+.sb-label{font-size:.62rem;color:var(--muted);font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.1rem}
+.sb-value{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em;color:var(--green);line-height:1}
+
+/* ── PAYMENT ── */
+.pay-summary-card{background:rgba(0,232,122,.04);border:1px solid rgba(0,232,122,.13);border-radius:var(--r);padding:1.1rem;margin-bottom:.9rem}
+.ps-row{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid rgba(0,232,122,.07)}
+.ps-row:last-child{border:none;padding-top:.6rem;margin-top:.2rem}
+.ps-key{color:var(--muted);font-weight:500}
+.ps-val{font-weight:700}
+.ps-total{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:var(--green);letter-spacing:.03em}
+.mpesa-block{background:linear-gradient(135deg,rgba(0,180,64,.07),rgba(0,232,122,.03));border:1px solid rgba(0,232,122,.22);border-radius:var(--r);padding:1.2rem;margin-bottom:.9rem}
+.mpesa-header{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem}
+.mpesa-icon{width:34px;height:34px;background:#4caf50;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.mpesa-title{font-weight:800;font-size:.9rem;color:var(--green)}
+.mpesa-sub{font-size:.68rem;color:var(--muted)}
+.till-number{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:var(--white);letter-spacing:.06em;line-height:1;margin:.4rem 0 .2rem}
+.ref-pill{display:inline-flex;align-items:center;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);border-radius:8px;padding:.3rem .75rem;font-family:monospace;font-size:.85rem;color:var(--gold);letter-spacing:.08em;margin-bottom:.7rem}
+.mpesa-steps{font-size:.74rem;color:var(--muted);line-height:2}
+.mpesa-steps strong{color:var(--white)}
+
+/* ── RECEIPT ── */
+.receipt-paper{background:#fff;color:#0a0f0b;border-radius:14px;overflow:hidden;box-shadow:0 4px 30px rgba(0,0,0,.2);margin-bottom:.9rem}
+
+/* ── TRACKING ── */
+#paxMap{height:265px;border-radius:var(--r);margin-bottom:.85rem}
+.leaflet-container{background:#040b05!important}
+.leaflet-tile{filter:brightness(.62) saturate(.7) hue-rotate(110deg)}
+.leaflet-popup-content-wrapper{background:rgba(6,14,8,.97)!important;border:1px solid rgba(0,232,122,.25)!important;border-radius:10px!important;color:var(--white)!important;font-family:'Plus Jakarta Sans',sans-serif!important;font-size:.82rem!important}
+.leaflet-popup-tip{background:rgba(6,14,8,.97)!important}
+.leaflet-popup-content{margin:.7rem!important}
+.track-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem}
+.track-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.9rem}
+.track-van{font-weight:800;font-size:.9rem}
+.track-route{font-size:.72rem;color:var(--muted);margin-top:.1rem}
+.track-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;text-align:center;margin-bottom:.9rem;padding:.7rem;background:var(--card2);border-radius:10px}
+.ts-num{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.03em;line-height:1}
+.ts-lbl{font-size:.6rem;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:.1rem}
+.stops-timeline{display:flex;flex-direction:column}
+.stop-item{display:flex;gap:.75rem;align-items:flex-start;padding-bottom:.9rem;position:relative}
+.stop-item:not(:last-child)::after{content:'';position:absolute;left:9px;top:22px;bottom:0;width:2px;background:var(--border)}
+.stop-item.passed::after{background:var(--green)}
+.stop-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;flex-shrink:0;z-index:1;transition:all .3s}
+.stop-item.passed .stop-dot{background:var(--green);border-color:var(--green);color:#060e08}
+.stop-item.current .stop-dot{border-color:var(--green);color:var(--green);animation:stopGlow 1.5s ease infinite}
+@keyframes stopGlow{0%,100%{box-shadow:0 0 0 4px rgba(0,232,122,.15)}50%{box-shadow:0 0 0 8px rgba(0,232,122,.05)}}
+.stop-name{font-size:.84rem;font-weight:600}
+.stop-status{font-size:.7rem;color:var(--muted);margin-top:.1rem}
+
+/* ── TICKETS ── */
+.ticket-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:.85rem}
+.ticket-stripe{height:5px}
+.ticket-body{padding:1.1rem}
+.ticket-ref{font-family:monospace;font-size:.7rem;color:var(--muted);margin-bottom:.2rem}
+.ticket-route{font-weight:800;font-size:.96rem;margin-bottom:.15rem}
+.ticket-details{font-size:.74rem;color:var(--muted);line-height:1.75;margin-bottom:.85rem}
+.ticket-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+/* ── PROFILE ── */
+.profile-hero{background:linear-gradient(135deg,rgba(0,232,122,.08),rgba(0,232,122,.02));border:1px solid rgba(0,232,122,.15);border-radius:var(--r);padding:1.6rem;text-align:center;margin-bottom:.9rem}
+.profile-av{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,var(--green),#007a3d);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.9rem;color:#060e08;margin:0 auto .9rem}
+.profile-name{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em}
+.profile-phone{font-size:.8rem;color:var(--muted);margin-top:.2rem}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.65rem;margin-bottom:.9rem}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:.9rem;text-align:center}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:var(--green);line-height:1}
+.stat-lbl{font-size:.6rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-top:.2rem}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(5px)}
+.modal-overlay.open{display:flex}
+.modal{background:#0e1f10;border-radius:20px 20px 0 0;border-top:1px solid var(--border);border-left:1px solid var(--border);border-right:1px solid var(--border);width:100%;max-width:430px;padding:1.5rem;max-height:90dvh;overflow-y:auto;animation:modalUp .3s cubic-bezier(.22,1,.36,1)}
+@keyframes modalUp{from{transform:translateY(100%)}to{transform:none}}
+.modal-handle{width:40px;height:4px;background:rgba(0,232,122,.2);border-radius:2px;margin:0 auto 1.3rem}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.05em;margin-bottom:.3rem}
+.stars-row{display:flex;gap:.35rem;font-size:1.9rem;cursor:pointer;margin:.65rem 0}
+.star-btn{opacity:.22;transition:opacity .14s;border:none;background:none;cursor:pointer;padding:0}
+.star-btn.active{opacity:1}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:66px;left:50%;transform:translateX(-50%) translateY(-16px);background:rgba(14,31,16,.97);border:1px solid var(--border);color:var(--white);padding:.65rem 1.3rem;border-radius:11px;font-size:.8rem;font-weight:600;z-index:999;opacity:0;transition:all .28s;pointer-events:none;white-space:nowrap;backdrop-filter:blur(14px);max-width:calc(100vw - 2rem)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:rgba(240,68,56,.4);color:var(--red)}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScreen">
+  <div class="login-logo">CATA<span>TU</span></div>
+  <div class="login-tagline">⚡ Nairobi's Electric Transit Network</div>
+  <div class="login-chips">
+    <span class="chip chip-g">Live Tracking</span>
+    <span class="chip chip-b">Seat Booking</span>
+    <span class="chip chip-gold">M-Pesa</span>
+    <span class="chip chip-g">QR Boarding</span>
+  </div>
+  <div class="login-card">
+    <div class="field"><label>Full Name</label><input id="lName" type="text" placeholder="Jane Mwangi" autocomplete="name"></div>
+    <div class="field"><label>Phone Number</label><input id="lPhone" type="tel" placeholder="0712 345 678" inputmode="tel" autocomplete="tel"></div>
+    <div class="field"><label>Email (optional)</label><input id="lEmail" type="email" placeholder="jane@email.com" inputmode="email"></div>
+    <button class="btn btn-green" onclick="doLogin()">Get Started →</button>
+    <div class="login-links" style="margin-top:.9rem">
+      Driver? <a href="driver.html">Driver Portal</a> &nbsp;·&nbsp; <a href="admin.html" style="color:var(--gold)">Admin Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand">CATA<span>TU</span></div>
+    <div class="topbar-right">
+      <div class="live-badge"><span class="live-dot"></span>Live</div>
+      <div class="user-av" id="topAv" onclick="navTo('profile')">J</div>
+    </div>
+  </div>
+
+  <div class="screens" id="screens">
+
+    <!-- HOME -->
+    <div class="screen active" id="s-home">
+      <div class="hero-block">
+        <div class="hero-sub">Ready to ride?</div>
+        <div class="hero-name">Hello, <em id="heroName">Passenger</em></div>
+        <div class="hero-desc">Electric · Tracked · On schedule</div>
+      </div>
+      <div class="quick-grid">
+        <div class="qcard" onclick="navTo('routes')"><div class="qcard-ico">🗺</div><div class="qcard-lbl">Book a Seat</div></div>
+        <div class="qcard" onclick="navTo('track')"><div class="qcard-ico">📍</div><div class="qcard-lbl">Track My Bus</div></div>
+        <div class="qcard" onclick="navTo('tickets')"><div class="qcard-ico">🎫</div><div class="qcard-lbl">My Tickets</div></div>
+        <div class="qcard" onclick="navTo('profile')"><div class="qcard-ico">👤</div><div class="qcard-lbl">My Profile</div></div>
+      </div>
+      <span class="sec-label">Today's Routes</span>
+      <div id="homeRoutes"></div>
+    </div>
+
+    <!-- ROUTES -->
+    <div class="screen" id="s-routes">
+      <div class="page-title">Choose a Route</div>
+      <div class="page-sub">All routes are live-tracked and run Mon–Fri</div>
+      <div class="field"><label>Travel Date</label><input type="date" id="travelDate"></div>
+      <div id="routeList"></div>
+    </div>
+
+    <!-- SEATS -->
+    <div class="screen" id="s-seats">
+      <div id="seatRouteHeader"></div>
+      <div class="bus-wrap">
+        <div class="bus-label">🚌 BUS LAYOUT — Select your seat</div>
+        <div class="seat-legend">
+          <div class="sl-item"><div class="sl-dot" style="border-color:rgba(0,232,122,.3);background:rgba(0,232,122,.06)"></div>Available</div>
+          <div class="sl-item"><div class="sl-dot" style="border-color:rgba(240,68,56,.22);background:rgba(240,68,56,.06)"></div>Booked</div>
+          <div class="sl-item"><div class="sl-dot" style="background:var(--green);border-color:var(--green)"></div>Your Seat</div>
+        </div>
+        <div class="avail-counter" id="availCounter">Loading seats…</div>
+        <div class="seat-grid" id="seatGrid"></div>
+      </div>
+      <div id="selectedBanner" style="display:none" class="selected-banner">
+        <div class="sb-left"><span class="sb-label">Selected Seat</span><span class="sb-value" id="seatLabel">—</span></div>
+        <div class="sb-left" style="text-align:right"><span class="sb-label">Boarding Stop</span><span style="font-size:.8rem;font-weight:700;margin-top:.15rem" id="stopLabel">—</span></div>
+      </div>
+      <div class="field"><label>Your Boarding Stop *</label>
+        <select id="boardingStop" onchange="onStopChange()"><option value="">Select your pickup stop…</option></select>
+      </div>
+      <button class="btn btn-green" id="seatContinueBtn" style="display:none;margin-bottom:.65rem" onclick="goToPayment()">Continue to Payment →</button>
+      <button class="btn btn-outline btn-sm" onclick="navTo('routes')" style="width:auto">← Back to Routes</button>
+    </div>
+
+    <!-- PAYMENT -->
+    <div class="screen" id="s-payment">
+      <div class="page-title">M-Pesa Payment</div>
+      <div class="page-sub">Pay securely via Lipa na M-Pesa</div>
+      <div class="pay-summary-card" id="paySummary"></div>
+      <div class="mpesa-block">
+        <div class="mpesa-header">
+          <div class="mpesa-icon">📱</div>
+          <div>
+            <div class="mpesa-title">Pay via M-Pesa</div>
+            <div class="mpesa-sub">Lipa na M-Pesa · Buy Goods &amp; Services</div>
+          </div>
+        </div>
+        <div style="font-size:.7rem;color:var(--muted);margin-bottom:.1rem">Till Number</div>
+        <div class="till-number">522533</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-bottom:.35rem">Use as Account / Reference:</div>
+        <div class="ref-pill" id="payRefDisplay">—</div>
+        <div class="mpesa-steps">
+          1. Open M-Pesa → <strong>Lipa na M-Pesa</strong> → Buy Goods<br>
+          2. Till Number: <strong>522533</strong><br>
+          3. Account: <strong id="payRefStep2">—</strong><br>
+          4. Amount: <strong id="payAmtStep">KSH —</strong><br>
+          5. Enter PIN → confirm → copy code below ↓
+        </div>
+      </div>
+      <div class="field">
+        <label>M-Pesa Confirmation Code *</label>
+        <input id="mpesaCode" type="text" placeholder="e.g. QGH7KL2PXY" style="text-transform:uppercase;font-family:monospace;letter-spacing:.1em;font-size:.95rem" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <button class="btn btn-green" id="confirmPayBtn" onclick="confirmPayment()">✓ Confirm &amp; Get Boarding QR</button>
+      <button class="btn btn-outline btn-sm" onclick="navTo('seats')" style="width:auto;margin-top:.65rem">← Change Seat</button>
+    </div>
+
+    <!-- RECEIPT / BOARDING PASS -->
+    <div class="screen" id="s-receipt">
+      <div style="text-align:center;margin-bottom:1.1rem">
+        <div style="font-size:3rem;margin-bottom:.3rem">🎉</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.06em;color:var(--green)">BOOKING CONFIRMED!</div>
+        <div style="font-size:.8rem;color:var(--muted)">Present QR code to the conductor when boarding</div>
+      </div>
+      <div class="receipt-paper" id="receiptContainer"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:.65rem">
+        <button class="btn btn-outline" onclick="printReceipt()">🖨 Print Ticket</button>
+        <button class="btn btn-ghost" onclick="navTo('track')">📍 Track Bus</button>
+      </div>
+      <button class="btn btn-outline" onclick="navTo('home')">← Back to Home</button>
+    </div>
+
+    <!-- TRACK -->
+    <div class="screen" id="s-track">
+      <div class="page-title">Live Bus Tracking</div>
+      <div class="page-sub">Real-time GPS · Updates every 8 seconds</div>
+      <div class="field"><label>Select Route to Track</label>
+        <select id="trackRouteSelect" onchange="startTracking()">
+          <option value="">Choose a route…</option>
+        </select>
+      </div>
+      <div id="trackContent" style="display:none">
+        <div id="paxMap"></div>
+        <div class="track-panel">
+          <div class="track-header">
+            <div>
+              <div class="track-van" id="trackVanId">—</div>
+              <div class="track-route" id="trackRouteName">—</div>
+            </div>
+            <span class="chip chip-g" id="trackStatusChip">● Moving</span>
+          </div>
+          <div class="track-stats">
+            <div><div class="ts-num" style="color:var(--green)" id="tSpeed">—</div><div class="ts-lbl">km/h</div></div>
+            <div><div class="ts-num" style="color:var(--gold)" id="tETA">—</div><div class="ts-lbl">ETA min</div></div>
+            <div><div class="ts-num" id="tPax">—</div><div class="ts-lbl">On Board</div></div>
+          </div>
+          <div class="divider" style="margin:.5rem 0"></div>
+          <span class="sec-label">Route Progress</span>
+          <div class="stops-timeline" id="stopsTimeline"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TICKETS -->
+    <div class="screen" id="s-tickets">
+      <div class="page-title">My Tickets</div>
+      <div class="page-sub">All your bookings and boarding passes</div>
+      <div id="ticketsList"></div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="screen" id="s-profile">
+      <div class="profile-hero">
+        <div class="profile-av" id="profileAv">J</div>
+        <div class="profile-name" id="profileName">—</div>
+        <div class="profile-phone" id="profilePhone">—</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.1rem" id="profileEmail">—</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num" id="stTrips">0</div><div class="stat-lbl">Trips</div></div>
+        <div class="stat-box"><div class="stat-num" id="stSpent">0</div><div class="stat-lbl">KSH Spent</div></div>
+        <div class="stat-box"><div class="stat-num" id="stRating">—</div><div class="stat-lbl">Avg Rating</div></div>
+      </div>
+      <button class="btn btn-outline" onclick="doLogout()" style="margin-top:.3rem">Sign Out</button>
+    </div>
+
+  </div><!-- /screens -->
+
+  <div class="bnav">
+    <button class="bn active" id="bn-home" onclick="navTo('home')"><div class="bn-ico">🏠</div><div class="bn-lbl">Home</div></button>
+    <button class="bn" id="bn-routes" onclick="navTo('routes')"><div class="bn-ico">🗺</div><div class="bn-lbl">Routes</div></button>
+    <button class="bn" id="bn-track" onclick="navTo('track')"><div class="bn-ico">📍</div><div class="bn-lbl">Track</div></button>
+    <button class="bn" id="bn-tickets" onclick="navTo('tickets')"><div class="bn-ico">🎫</div><div class="bn-lbl">Tickets</div></button>
+    <button class="bn" id="bn-profile" onclick="navTo('profile')"><div class="bn-ico">👤</div><div class="bn-lbl">Profile</div></button>
+  </div>
+</div><!-- /app -->
+
+<!-- FEEDBACK MODAL -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Rate Your Journey ⭐</div>
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">Your feedback helps us improve CATATU service</div>
+    <div style="font-size:.76rem;color:var(--muted)" id="fbBookingInfo"></div>
+    <div class="stars-row" id="starsRow">
+      <button class="star-btn" onclick="setStar(1)">⭐</button>
+      <button class="star-btn" onclick="setStar(2)">⭐</button>
+      <button class="star-btn" onclick="setStar(3)">⭐</button>
+      <button class="star-btn" onclick="setStar(4)">⭐</button>
+      <button class="star-btn" onclick="setStar(5)">⭐</button>
+    </div>
+    <div class="field"><label>Comments (optional)</label><input id="fbComment" type="text" placeholder="How was your experience?"></div>
+    <button class="btn btn-green" onclick="submitFeedback()" style="margin-bottom:.65rem">Submit Feedback</button>
+    <button class="btn btn-outline" onclick="closeFeedback()">Skip for Now</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════════════
+const ROUTES = [
+  { id:'R1', name:'Zone A Express', from:'Donholm / Taj Mall', to:'Strathmore University',
+    stops:['Taj Mall','Greenspan Mall','Nyayo Estate','Donholm Stage','Upperhill','Strathmore Univ.'],
+    departs:'6:30 AM', arrives:'7:10 AM', fare:200, seats:24,
+    color:'#3b82f6', van:'CV-001', lat:-1.310, lng:36.878,
+    uni:'strathmore', uniName:'Strathmore University' },
+  { id:'R2', name:'Zone B Academic', from:'Kilimani / Lavington', to:'University of Nairobi',
+    stops:['Hurlingham','Kilimani Rd','Valley Arcade','Lavington','University of Nairobi'],
+    departs:'6:45 AM', arrives:'7:20 AM', fare:300, seats:24,
+    color:'#22c55e', van:'CV-002', lat:-1.282, lng:36.803,
+    uni:'uon', uniName:'University of Nairobi' },
+  { id:'R3', name:'Zone E Long Haul', from:'TRM / Roysambu', to:'Daystar University',
+    stops:['TRM Mall','Roysambu','Garden City','Syokimau','Daystar University'],
+    departs:'6:00 AM', arrives:'7:30 AM', fare:450, seats:24,
+    color:'#a855f7', van:'CV-003', lat:-1.265, lng:36.870,
+    uni:'daystar', uniName:'Daystar University' },
+  { id:'R4', name:'Zone C Connect', from:'Ruaka / Two Rivers', to:'Riara University',
+    stops:['Two Rivers','Ruaka Rd','Muthaiga','Westlands','Riara University'],
+    departs:'6:30 AM', arrives:'7:15 AM', fare:350, seats:24,
+    color:'#f97316', van:'CV-004', lat:-1.233, lng:36.812,
+    uni:'riara', uniName:'Riara University' },
+  { id:'R5', name:'Zone D Karen', from:'Karen / Rongai', to:'Strathmore University',
+    stops:['Rongai Stage','Hardy','Karen Shopping Ctr','Langata Rd','Strathmore Univ.'],
+    departs:'5:50 AM', arrives:'7:00 AM', fare:400, seats:24,
+    color:'#ef4444', van:'CV-005', lat:-1.340, lng:36.737,
+    uni:'strathmore', uniName:'Strathmore University' },
+];
+
+const UNI_LOGOS = {
+  strathmore: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/05/Strathmore_University_logo.svg/120px-Strathmore_University_logo.svg.png',
+  uon: 'https://upload.wikimedia.org/wikipedia/en/thumb/8/82/University_of_Nairobi_Logo.png/120px-University_of_Nairobi_Logo.png',
+  daystar: 'https://upload.wikimedia.org/wikipedia/en/2/23/Daystar_University_logo.jpg',
+  riara: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFGOvHB5BLSwB97hS5XNqiYoWM8mOdBLobFA&s',
+};
+
+// Simulated live bus positions (replace with Firebase in production)
+const BUS_SIM = {
+  R1:{lat:-1.310,lng:36.878,spd:42,eta:8,stop:1,pax:18},
+  R2:{lat:-1.282,lng:36.803,spd:35,eta:12,stop:0,pax:14},
+  R3:{lat:-1.265,lng:36.870,spd:58,eta:22,stop:2,pax:20},
+  R4:{lat:-1.233,lng:36.812,spd:28,eta:15,stop:1,pax:11},
+  R5:{lat:-1.340,lng:36.737,spd:48,eta:18,stop:0,pax:16},
+};
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let user = null, selRoute = null, selSeat = null, takenSeats = [];
+let curBooking = null, trackMap = null, busMk = null, trackInterval = null;
+let fbStar = 0, fbBookingId = null, lastReceiptHTML = '';
+
+// ══════════════════════════════════════════════════════════════
+// DB
+// ══════════════════════════════════════════════════════════════
+async function dbGet(k) {
+  try {
+    if (window.storage) { const r = await window.storage.get('ct_' + k); return r ? JSON.parse(r.value) : null; }
+    return JSON.parse(localStorage.getItem('ct_' + k) || 'null');
+  } catch { return null; }
+}
+async function dbSet(k, v) {
+  try {
+    const s = JSON.stringify(v);
+    if (window.storage) await window.storage.set('ct_' + k, s);
+    else localStorage.setItem('ct_' + k, s);
+  } catch {}
+}
+async function getAllBookings() { return (await dbGet('bookings')) || []; }
+async function saveBooking(b) {
+  const all = await getAllBookings();
+  const i = all.findIndex(x => x.id === b.id);
+  if (i >= 0) all[i] = b; else all.push(b);
+  await dbSet('bookings', all); return b;
+}
+async function getRouteBookings(rid, date) {
+  const all = await getAllBookings();
+  return all.filter(b => b.routeId === rid && b.date === date && b.status !== 'cancelled');
+}
+async function myBookings() { const all = await getAllBookings(); return all.filter(b => b.phone === user?.phone); }
+
+// ══════════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════════
+async function doLogin() {
+  const name = document.getElementById('lName').value.trim();
+  const phone = document.getElementById('lPhone').value.trim();
+  if (!name) { toast('Please enter your name', 'error'); return; }
+  if (phone.length < 9) { toast('Please enter a valid phone number', 'error'); return; }
+  user = { name, phone, email: document.getElementById('lEmail').value.trim(), av: name[0].toUpperCase() };
+  await dbSet('pax_user', user);
+  bootApp();
+}
+async function doLogout() { await dbSet('pax_user', null); location.reload(); }
+async function checkAuth() {
+  const u = await dbGet('pax_user');
+  if (u) { user = u; bootApp(); }
+  else document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function bootApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').classList.add('ready');
+  document.getElementById('topAv').textContent = user.av;
+  document.getElementById('heroName').textContent = user.name.split(' ')[0];
+  document.getElementById('profileAv').textContent = user.av;
+  document.getElementById('profileName').textContent = user.name;
+  document.getElementById('profilePhone').textContent = user.phone;
+  document.getElementById('profileEmail').textContent = user.email || '—';
+  const t = new Date().toISOString().split('T')[0];
+  document.getElementById('travelDate').value = t;
+  document.getElementById('travelDate').min = t;
+  // Populate track route select
+  const tsel = document.getElementById('trackRouteSelect');
+  tsel.innerHTML = '<option value="">Choose a route…</option>' + ROUTES.map(r => `<option value="${r.id}">${r.name} (${r.from} → ${r.to})</option>`).join('');
+  renderHomeRoutes();
+  loadProfileStats();
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function navTo(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.bn').forEach(b => b.classList.remove('active'));
+  document.getElementById('s-' + screen).classList.add('active');
+  const bn = document.getElementById('bn-' + screen);
+  if (bn) bn.classList.add('active');
+  document.getElementById('screens').scrollTo({ top: 0, behavior: 'instant' });
+  if (screen === 'routes') renderRoutes();
+  if (screen === 'tickets') loadTickets();
+  if (screen === 'profile') loadProfileStats();
+}
+
+// ══════════════════════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════════════════════
+function renderHomeRoutes() {
+  document.getElementById('homeRoutes').innerHTML = ROUTES.map(r => `
+    <div class="route-strip" style="border-left-color:${r.color}" onclick="quickSelectRoute('${r.id}')">
+      <div class="rs-body">
+        <div class="rs-name">${r.name}</div>
+        <div class="rs-path">${r.from} → ${r.to}</div>
+      </div>
+      <img src="${UNI_LOGOS[r.uni]||''}" style="width:28px;height:28px;object-fit:contain;background:#fff;border-radius:5px;padding:2px;flex-shrink:0" onerror="this.style.display='none'">
+      <div class="rs-right">
+        <div class="rs-price">KSH ${r.fare}</div>
+        <span class="chip chip-b" style="font-size:.55rem">${r.departs}</span>
+      </div>
+    </div>`).join('');
+}
+async function quickSelectRoute(id) {
+  const date = document.getElementById('travelDate').value || new Date().toISOString().split('T')[0];
+  await prepareSeats(id, date);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ROUTES
+// ══════════════════════════════════════════════════════════════
+function renderRoutes() {
+  document.getElementById('routeList').innerHTML = ROUTES.map(r => {
+    const logo = UNI_LOGOS[r.uni] || '';
+    return `<div class="route-card" onclick="selectRoute('${r.id}')">
+      <div class="rc-accent" style="background:${r.color}"></div>
+      <div class="rc-body">
+        <div class="rc-header">
+          <div class="rc-name">${r.name}</div>
+          <div>
+            <div class="rc-price">KSH ${r.fare} <small>/trip</small></div>
+          </div>
+        </div>
+        <div class="rc-uni">
+          ${logo ? `<img src="${logo}" onerror="this.style.display='none'">` : ''}
+          <span>${r.uniName}</span>
+          <span style="margin-left:auto"><span class="chip chip-b">🕐 ${r.departs}</span></span>
+        </div>
+        <div class="rc-stops">📍 ${r.stops.join(' → ')}</div>
+        <div class="rc-footer">
+          <span class="chip chip-dim">Arrives ${r.arrives}</span>
+          <span class="chip chip-g">⚡ Electric Van</span>
+          <span class="chip chip-g">Live Tracked</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function selectRoute(id) {
+  const date = document.getElementById('travelDate').value || new Date().toISOString().split('T')[0];
+  await prepareSeats(id, date);
+}
+
+// ══════════════════════════════════════════════════════════════
+// SEATS
+// ══════════════════════════════════════════════════════════════
+async function prepareSeats(routeId, date) {
+  selRoute = ROUTES.find(r => r.id === routeId);
+  selSeat = null;
+  const bks = await getRouteBookings(routeId, date);
+  takenSeats = bks.map(b => b.seat);
+  const avail = selRoute.seats - takenSeats.length;
+
+  // Route header
+  const logo = UNI_LOGOS[selRoute.uni] || '';
+  document.getElementById('seatRouteHeader').innerHTML = `
+    <div style="background:var(--card);border:1px solid ${selRoute.color}44;border-left:4px solid ${selRoute.color};border-radius:var(--r);padding:1rem;margin-bottom:.9rem">
+      <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.5rem">
+        ${logo ? `<img src="${logo}" style="width:36px;height:36px;object-fit:contain;background:#fff;border-radius:7px;padding:2px;flex-shrink:0" onerror="this.style.display='none'">` : ''}
+        <div>
+          <div style="font-weight:800;font-size:.98rem">${selRoute.name}</div>
+          <div style="font-size:.73rem;color:var(--muted)">${selRoute.from} → ${selRoute.to}</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--green)">KSH ${selRoute.fare}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+        <span class="chip chip-b">🕐 ${selRoute.departs}</span>
+        <span class="chip ${avail < 5 ? 'chip-r' : 'chip-g'}">${avail} of ${selRoute.seats} seats free</span>
+      </div>
+    </div>`;
+
+  // Boarding stop options
+  const bsel = document.getElementById('boardingStop');
+  bsel.innerHTML = '<option value="">Select your pickup stop…</option>' + selRoute.stops.slice(0, -1).map(s => `<option value="${s}">${s}</option>`).join('');
+
+  renderSeatGrid();
+  document.getElementById('selectedBanner').style.display = 'none';
+  document.getElementById('seatContinueBtn').style.display = 'none';
+  navTo('seats');
+}
+
+function renderSeatGrid() {
+  const avail = selRoute.seats - takenSeats.length;
+  document.getElementById('availCounter').innerHTML = `<strong>${avail}</strong> of ${selRoute.seats} seats available for ${document.getElementById('travelDate').value || 'today'}`;
+  const grid = document.getElementById('seatGrid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= selRoute.seats; i++) {
+    const isDrv = i === 1, isTaken = takenSeats.includes(i), isSel = selSeat === i;
+    const cls = isDrv ? 'driver' : isTaken ? 'booked' : isSel ? 'selected' : 'empty';
+    const el = document.createElement('div');
+    el.className = 'seat ' + cls;
+    if (isDrv) el.innerHTML = '<span class="seat-ico">🚗</span>';
+    else el.innerHTML = `<span class="seat-num">${i}</span>`;
+    el.title = isDrv ? 'Driver Seat' : isTaken ? 'Already Booked' : `Seat ${i}`;
+    if (!isDrv && !isTaken) el.onclick = () => chooseSeat(i);
+    grid.appendChild(el);
+  }
+}
+
+function chooseSeat(n) {
+  selSeat = selSeat === n ? null : n;
+  renderSeatGrid();
+  const banner = document.getElementById('selectedBanner');
+  if (selSeat) {
+    banner.style.display = 'flex';
+    document.getElementById('seatLabel').textContent = 'Seat ' + selSeat;
+    document.getElementById('stopLabel').textContent = document.getElementById('boardingStop').value || 'Not chosen';
+    document.getElementById('seatContinueBtn').style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+    document.getElementById('seatContinueBtn').style.display = 'none';
+  }
+}
+
+function onStopChange() {
+  if (selSeat) document.getElementById('stopLabel').textContent = document.getElementById('boardingStop').value || '—';
+}
+
+// ══════════════════════════════════════════════════════════════
+// PAYMENT
+// ══════════════════════════════════════════════════════════════
+function goToPayment() {
+  if (!selSeat) { toast('Please select a seat first', 'error'); return; }
+  if (!document.getElementById('boardingStop').value) { toast('Please select your boarding stop', 'error'); return; }
+  const ref = 'CAT' + Date.now().toString(36).toUpperCase().slice(0, 8);
+  window._payRef = ref;
+  document.getElementById('payRefDisplay').textContent = ref;
+  document.getElementById('payRefStep2').textContent = ref;
+  document.getElementById('payAmtStep').textContent = 'KSH ' + selRoute.fare;
+  const stop = document.getElementById('boardingStop').value;
+  const date = document.getElementById('travelDate').value;
+  document.getElementById('paySummary').innerHTML = [
+    ['Route', selRoute.name],
+    ['From', stop],
+    ['To', selRoute.to],
+    ['Seat Number', '🪑 Seat ' + selSeat],
+    ['Date', date],
+    ['Departure', selRoute.departs],
+    ['Amount Due', null],
+  ].map(([k, v]) => `<div class="ps-row">
+    <span class="ps-key">${k}</span>
+    <span class="${v === null ? 'ps-total' : 'ps-val'}">${v === null ? 'KSH ' + selRoute.fare : v}</span>
+  </div>`).join('');
+  navTo('payment');
+}
+
+async function confirmPayment() {
+  const code = document.getElementById('mpesaCode').value.trim().toUpperCase();
+  if (code.length < 6) { toast('Please enter your M-Pesa confirmation code', 'error'); return; }
+  const btn = document.getElementById('confirmPayBtn');
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Saving booking…';
+  await new Promise(r => setTimeout(r, 1100));
+
+  const date = document.getElementById('travelDate').value || new Date().toISOString().split('T')[0];
+  const bk = {
+    id: window._payRef,
+    routeId: selRoute.id,
+    routeName: selRoute.name,
+    seat: selSeat,
+    boardingStop: document.getElementById('boardingStop').value,
+    name: user.name, phone: user.phone, email: user.email,
+    amount: selRoute.fare, mpesaRef: code, date,
+    status: 'confirmed', boarded: false,
+    ts: new Date().toISOString(),
+  };
+  await saveBooking(bk);
+  curBooking = bk;
+  takenSeats.push(selSeat);
+  btn.classList.remove('btn-loading');
+  btn.textContent = '✓ Confirm & Get Boarding QR';
+  showReceipt(bk);
+}
+
+// ══════════════════════════════════════════════════════════════
+// RECEIPT
+// ══════════════════════════════════════════════════════════════
+function showReceipt(bk) {
+  const route = ROUTES.find(r => r.id === bk.routeId) || {};
+  const qrData = JSON.stringify({ ref: bk.id, seat: bk.seat, route: bk.routeId, name: bk.name, phone: bk.phone });
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrData)}&bgcolor=ffffff&color=060e08&margin=10`;
+  const logo = UNI_LOGOS[route.uni] || '';
+
+  lastReceiptHTML = `
+  <div style="font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:#0a0f0b;border-radius:12px;overflow:hidden">
+    <div style="background:#060e08;padding:1.2rem 1.4rem;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.06em;color:#fff">CATA<span style="color:#00e87a">TU</span></div>
+      ${logo ? `<img src="${logo}" style="height:34px;width:auto;object-fit:contain;background:#fff;border-radius:5px;padding:3px" onerror="this.style.display='none'">` : ''}
+    </div>
+    <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);padding:1.1rem 1.4rem;border-bottom:2px dashed #86efac">
+      <div style="font-size:.64rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#166534;margin-bottom:.15rem">✓ Payment Confirmed</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;color:#15803d;letter-spacing:.04em;line-height:1">KSH ${Number(bk.amount).toLocaleString()}</div>
+      <div style="font-size:.73rem;color:#16a34a;margin-top:.15rem">M-Pesa: <strong style="font-family:monospace">${bk.mpesaRef}</strong></div>
+    </div>
+    <div style="padding:1.1rem 1.4rem;border-bottom:2px dashed #e5e7eb">
+      ${[['Booking Ref',bk.id],['Passenger',bk.name],['Phone',bk.phone],['Route',route.name||''],['Boarding Stop',bk.boardingStop],['Destination',route.to||''],['Seat No.','Seat '+bk.seat],['Departure',route.departs||''],['Date',bk.date],['Status','✓ Confirmed & Paid']].map(([k,v])=>`
+        <div style="display:flex;justify-content:space-between;padding:.36rem 0;border-bottom:1px solid #f9fafb;font-size:.78rem">
+          <span style="color:#6b7280;font-weight:500">${k}</span>
+          <span style="font-weight:700;color:${k==='Status'?'#16a34a':'#0a0f0b'}">${v}</span>
+        </div>`).join('')}
+    </div>
+    <div style="padding:1.1rem 1.4rem;text-align:center;border-bottom:2px dashed #e5e7eb">
+      <img src="${qrUrl}" style="width:155px;height:155px;border:3px solid #060e08;border-radius:8px" alt="Boarding QR">
+      <div style="font-size:.67rem;color:#9ca3af;margin-top:.45rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase">🔲 Show this QR to the conductor to board</div>
+    </div>
+    <div style="background:#fffbeb;padding:.7rem 1.4rem;text-align:center;font-size:.68rem;color:#92400e">⚡ CATATU Electric Transport · 0743 929 560 · Nairobi, Kenya</div>
+  </div>`;
+
+  document.getElementById('receiptContainer').innerHTML = lastReceiptHTML;
+  navTo('receipt');
+  toast('🎉 Booking confirmed!');
+}
+
+function printReceipt() {
+  const w = window.open('', '_blank', 'width=460,height=780');
+  w.document.write(`<!DOCTYPE html><html><head><title>CATATU Ticket</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>body{margin:0;padding:1rem;background:#f1f5f9;font-family:'Plus Jakarta Sans',sans-serif}@media print{body{padding:0;background:#fff}}</style>
+    </head><body>${lastReceiptHTML}<script>setTimeout(()=>window.print(),800)<\/script></body></html>`);
+  w.document.close();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TRACKING
+// ══════════════════════════════════════════════════════════════
+function startTracking() {
+  const id = document.getElementById('trackRouteSelect').value;
+  const cont = document.getElementById('trackContent');
+  if (!id) { cont.style.display = 'none'; if (trackInterval) clearInterval(trackInterval); return; }
+  cont.style.display = 'block';
+  const route = ROUTES.find(r => r.id === id);
+  const sim = BUS_SIM[id];
+  if (trackMap) { trackMap.remove(); trackMap = null; }
+  if (trackInterval) clearInterval(trackInterval);
+
+  setTimeout(() => {
+    trackMap = L.map('paxMap', { center: [sim.lat, sim.lng], zoom: 13, zoomControl: false, attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+    L.control.zoom({ position: 'bottomright' }).addTo(trackMap);
+
+    // Bus marker
+    const busIco = L.divIcon({
+      html: `<div style="width:40px;height:40px;border-radius:50%;background:#060e08;border:3px solid ${route.color};display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 8px ${route.color}22,0 4px 20px rgba(0,0,0,.5)">🚐</div>`,
+      className: '', iconSize: [40, 40], iconAnchor: [20, 20]
+    });
+    busMk = L.marker([sim.lat, sim.lng], { icon: busIco }).addTo(trackMap);
+    busMk.bindPopup(`<strong style="color:#00e87a">${route.name}</strong><br>${route.van}<br>Speed: ${sim.spd} km/h<br>Pax: ${sim.pax}/24`).openPopup();
+
+    // Stop markers
+    route.stops.forEach((s, i) => {
+      const slat = sim.lat + (i - 1) * 0.006, slng = sim.lng - i * 0.005;
+      const sIco = L.divIcon({
+        html: `<div style="width:20px;height:20px;border-radius:50%;background:#060e08;border:2px solid ${route.color}99;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:${route.color}">${i+1}</div>`,
+        className: '', iconSize: [20, 20], iconAnchor: [10, 10]
+      });
+      L.marker([slat, slng], { icon: sIco }).addTo(trackMap).bindPopup(s);
+    });
+
+    // Route polyline
+    const pts = route.stops.map((s, i) => [sim.lat + (i - 1) * 0.006, sim.lng - i * 0.005]);
+    L.polyline(pts, { color: route.color, weight: 3, opacity: .5, dashArray: '6 5' }).addTo(trackMap);
+
+    updateTrackUI(route, sim);
+    trackInterval = setInterval(() => {
+      BUS_SIM[id].lat += (Math.random() - .5) * .0014;
+      BUS_SIM[id].lng += (Math.random() - .5) * .0014;
+      BUS_SIM[id].spd = Math.round(25 + Math.random() * 45);
+      BUS_SIM[id].eta = Math.max(1, BUS_SIM[id].eta - .1);
+      const p = BUS_SIM[id];
+      if (busMk) busMk.setLatLng([p.lat, p.lng]);
+      updateTrackUI(route, p);
+    }, 8000);
+  }, 250);
+}
+
+function updateTrackUI(route, pos) {
+  const g = id => document.getElementById(id);
+  if (g('trackVanId')) g('trackVanId').textContent = `${route.van} · ${route.name}`;
+  if (g('trackRouteName')) g('trackRouteName').textContent = `${route.from} → ${route.to}`;
+  if (g('tSpeed')) g('tSpeed').textContent = pos.spd;
+  if (g('tETA')) g('tETA').textContent = Math.round(pos.eta);
+  if (g('tPax')) g('tPax').textContent = `${pos.pax}/24`;
+  if (g('stopsTimeline')) g('stopsTimeline').innerHTML = route.stops.map((s, i) => {
+    const passed = i < pos.stop, cur = i === pos.stop;
+    return `<div class="stop-item ${passed ? 'passed' : cur ? 'current' : ''}">
+      <div class="stop-dot">${passed ? '✓' : cur ? '▶' : i + 1}</div>
+      <div>
+        <div class="stop-name" style="color:${cur ? 'var(--green)' : passed ? 'var(--muted)' : 'var(--white)'}">${s}</div>
+        <div class="stop-status">${passed ? 'Departed' : cur ? '● Bus is here' : 'Upcoming'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// TICKETS
+// ══════════════════════════════════════════════════════════════
+async function loadTickets() {
+  const bks = await myBookings();
+  const el = document.getElementById('ticketsList');
+  if (!bks.length) {
+    el.innerHTML = `<div style="text-align:center;padding:3rem 1rem">
+      <div style="font-size:3.5rem;margin-bottom:.7rem">🎫</div>
+      <div style="color:var(--muted);margin-bottom:1.3rem;font-size:.88rem">No bookings yet.<br>Book your first seat today!</div>
+      <button class="btn btn-green" style="max-width:200px;margin:0 auto" onclick="navTo('routes')">Book a Seat →</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = bks.slice().reverse().map(bk => {
+    const route = ROUTES.find(r => r.id === bk.routeId) || {};
+    return `<div class="ticket-card">
+      <div class="ticket-stripe" style="background:${route.color || '#00e87a'}"></div>
+      <div class="ticket-body">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem">
+          <div>
+            <div class="ticket-ref">${bk.id}</div>
+            <div class="ticket-route">${bk.routeName || route.name || '—'}</div>
+          </div>
+          <span class="chip ${bk.boarded ? 'chip-g' : bk.status === 'confirmed' ? 'chip-g' : 'chip-r'}">${bk.boarded ? '✓ Boarded' : bk.status}</span>
+        </div>
+        <div class="ticket-details">
+          📅 ${bk.date} &nbsp;·&nbsp; 🪑 Seat ${bk.seat}<br>
+          📍 Boards at: <strong>${bk.boardingStop}</strong><br>
+          🎓 To: ${route.to || '—'} &nbsp;·&nbsp; 🕐 ${route.departs || ''}<br>
+          💳 M-Pesa: <strong style="color:var(--white);font-family:monospace">${bk.mpesaRef}</strong>
+        </div>
+        <div class="ticket-actions">
+          <button class="btn btn-ghost btn-sm" onclick="viewTicket('${bk.id}')">🔲 View QR</button>
+          <button class="btn btn-outline btn-sm" onclick="openFeedback('${bk.id}')">⭐ Rate Trip</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function viewTicket(id) {
+  const all = await getAllBookings();
+  const bk = all.find(x => x.id === id);
+  if (bk) { curBooking = bk; showReceipt(bk); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROFILE
+// ══════════════════════════════════════════════════════════════
+async function loadProfileStats() {
+  const bks = await myBookings();
+  document.getElementById('stTrips').textContent = bks.length;
+  document.getElementById('stSpent').textContent = bks.reduce((s, b) => s + (b.amount || 0), 0).toLocaleString();
+  const fb = (await dbGet('feedback') || []).filter(f => f.phone === user.phone);
+  const avg = fb.length ? (fb.reduce((s, f) => s + f.rating, 0) / fb.length).toFixed(1) : '—';
+  document.getElementById('stRating').textContent = avg;
+}
+
+// ══════════════════════════════════════════════════════════════
+// FEEDBACK
+// ══════════════════════════════════════════════════════════════
+function openFeedback(bookingId) {
+  fbBookingId = bookingId; fbStar = 0;
+  document.querySelectorAll('.star-btn').forEach(s => s.classList.remove('active'));
+  document.getElementById('fbComment').value = '';
+  document.getElementById('fbBookingInfo').textContent = 'Booking: ' + bookingId;
+  document.getElementById('feedbackModal').classList.add('open');
+}
+function closeFeedback() { document.getElementById('feedbackModal').classList.remove('open'); }
+function setStar(n) {
+  fbStar = n;
+  document.querySelectorAll('.star-btn').forEach((s, i) => s.classList.toggle('active', i < n));
+}
+async function submitFeedback() {
+  if (!fbStar) { toast('Please select a star rating', 'error'); return; }
+  const fb = { id: 'FB' + Date.now(), bookingId: fbBookingId, rating: fbStar, comment: document.getElementById('fbComment').value.trim(), name: user.name, phone: user.phone, ts: new Date().toISOString() };
+  const all = (await dbGet('feedback')) || [];
+  all.push(fb);
+  await dbSet('feedback', all);
+  closeFeedback();
+  toast('Thank you for your feedback! ⭐');
+}
+
+// ══════════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = 'toast', 3500);
+}
+
+// INIT
+checkAuth();
+</script>
+</body>
+</html>

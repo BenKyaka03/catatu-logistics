@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05080f">
+<title>CATATU – Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#05080f;--card:#0c1220;--c2:#101828;--green:#00e87a;--gold:#d4a843;--w:#eef0f8;--mu:#4a5a7a;--bdr:rgba(100,160,255,.1);--red:#f04438;--blue:#3b82f6;--r:12px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--w);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:230px 1fr;grid-template-rows:60px 1fr;min-height:100vh;max-height:100vh;overflow:hidden}
+@media(max-width:768px){.layout{grid-template-columns:1fr;grid-template-rows:58px 1fr 62px;max-height:100dvh}.sidebar{display:none!important}.col-4{grid-template-columns:1fr 1fr!important}.col-3{grid-template-columns:1fr 1fr!important}.col-2{grid-template-columns:1fr!important}.mbnav{display:grid!important}}
+
+.topbar{grid-column:1/-1;background:rgba(5,8,15,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;z-index:60}
+.brand{font-family:'Syne',sans-serif;font-size:1.35rem;font-weight:800}.brand em{color:var(--green);font-style:normal}
+.live-pill{display:flex;align-items:center;gap:.35rem;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:rgba(0,232,122,.08);color:var(--green);border:1px solid rgba(0,232,122,.2);padding:.22rem .58rem;border-radius:20px}
+.ld{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.sidebar{background:rgba(8,12,22,.9);border-right:1px solid var(--bdr);padding:1rem .7rem;display:flex;flex-direction:column;gap:.25rem;overflow-y:auto}
+.sbl{display:flex;align-items:center;gap:.65rem;padding:.72rem .85rem;border-radius:9px;cursor:pointer;font-size:.82rem;font-weight:500;color:var(--mu);border:none;background:none;font-family:inherit;text-align:left;width:100%;transition:all .18s}
+.sbl:hover{background:rgba(255,255,255,.04);color:var(--w)}
+.sbl.on{background:rgba(0,232,122,.08);color:var(--green);border:1px solid rgba(0,232,122,.15)}
+.sbl-i{font-size:1.05rem;width:20px;flex-shrink:0;text-align:center}
+.sep{height:1px;background:var(--bdr);margin:.4rem 0}
+.sb-label{font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);padding:.5rem .85rem .2rem}
+
+.content{overflow-y:auto;padding:1.5rem;scrollbar-width:thin;scrollbar-color:rgba(100,160,255,.1) transparent}
+.screen{display:none;animation:fu .2s ease}
+.screen.act{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* MOBILE NAV */
+.mbnav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(5,8,15,.97);backdrop-filter:blur(20px);border-top:1px solid var(--bdr);grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:60}
+.mbn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:.65rem .2rem;border:none;background:none;color:var(--mu);font-family:inherit;cursor:pointer;transition:color .18s}
+.mbn.on{color:var(--green)}.mbn-i{font-size:1.2rem}.mbn-l{font-size:.55rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+
+/* ATOMS */
+.pg-title{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;margin-bottom:.2rem}
+.pg-sub{font-size:.8rem;color:var(--mu);margin-bottom:1.3rem}
+.sl{font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:.7rem;display:block}
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:1rem}
+.cbody{padding:1.2rem}
+.card-t{font-family:'Syne',sans-serif;font-weight:700;font-size:.93rem;margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem}
+.card-t em{color:var(--green);font-style:normal}
+
+.col-4{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.2rem}
+.col-3{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-bottom:1.2rem}
+.col-2{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-bottom:1.2rem}
+
+/* KPI CARDS */
+.kpi{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);padding:1.2rem;position:relative;overflow:hidden;transition:border-color .2s}
+.kpi:hover{border-color:rgba(0,232,122,.2)}
+.kpi-ico{position:absolute;right:.9rem;top:.4rem;font-size:2.8rem;opacity:.07;line-height:1}
+.kpi-n{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;line-height:1;margin-bottom:.2rem}
+.kpi-l{font-size:.67rem;color:var(--mu);text-transform:uppercase;letter-spacing:.1em}
+.kpi-sub{font-size:.75rem;margin-top:.4rem}
+.kg .kpi-n{color:var(--green)}.kgold .kpi-n{color:var(--gold)}.kred .kpi-n{color:var(--red)}.kb .kpi-n{color:var(--blue)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;font-family:'Syne',sans-serif;font-weight:700;font-size:.77rem;letter-spacing:.06em;text-transform:uppercase;border-radius:9px;padding:.72rem 1.2rem;cursor:pointer;border:none;transition:all .2s;min-height:42px}
+.btn-g{background:var(--green);color:#05080f}.btn-g:hover{filter:brightness(1.08)}
+.btn-o{background:transparent;color:var(--w);border:1.5px solid var(--bdr)}.btn-o:hover{border-color:var(--green);color:var(--green)}
+.btn-sm{padding:.42rem .85rem;font-size:.7rem;min-height:34px}
+.btn-full{width:100%}
+
+.fld{margin-bottom:.9rem}
+.fld label{display:block;font-size:.65rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--mu);margin-bottom:.35rem}
+.fld input,.fld select{width:100%;background:rgba(100,160,255,.04);border:1px solid var(--bdr);border-radius:8px;color:var(--w);font-family:inherit;font-size:.88rem;padding:.68rem 1rem;outline:none;min-height:42px;appearance:none;transition:border-color .2s}
+.fld input:focus,.fld select:focus{border-color:var(--green)}
+select option{background:#0c1220}
+
+.chip{display:inline-flex;align-items:center;font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:.2rem .5rem;border-radius:20px;white-space:nowrap}
+.cg{background:rgba(0,232,122,.1);color:var(--green);border:1px solid rgba(0,232,122,.2)}
+.cr{background:rgba(240,68,56,.1);color:var(--red);border:1px solid rgba(240,68,56,.2)}
+.cgold{background:rgba(212,168,67,.1);color:var(--gold);border:1px solid rgba(212,168,67,.2)}
+.cb{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.cdim{background:rgba(255,255,255,.05);color:var(--mu);border:1px solid rgba(255,255,255,.06)}
+.div{height:1px;background:var(--bdr);margin:.8rem 0}
+
+/* TABLES */
+.tbl{width:100%;border-collapse:collapse;font-size:.8rem}
+.tbl th{font-size:.63rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--mu);padding:.6rem .8rem;border-bottom:1px solid var(--bdr);text-align:left;white-space:nowrap;background:rgba(0,0,0,.2)}
+.tbl td{padding:.68rem .8rem;border-bottom:1px solid rgba(100,160,255,.05);vertical-align:middle}
+.tbl tr:hover td{background:rgba(255,255,255,.015)}
+.tbl-scroll{overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr)}
+
+/* MAP */
+#adminMap{height:360px;border-radius:12px;border:1px solid var(--bdr)}
+.leaflet-container{background:#030508!important}
+.leaflet-tile{filter:brightness(.6) saturate(.65) hue-rotate(200deg)}
+.leaflet-popup-content-wrapper{background:rgba(5,8,15,.97)!important;border:1px solid rgba(100,160,255,.25)!important;border-radius:10px!important;color:var(--w)!important;font-family:'Inter',sans-serif!important}
+.leaflet-popup-tip{background:rgba(5,8,15,.97)!important}
+
+/* CHARTS */
+.bar-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.55rem}
+.bar-lbl{font-size:.72rem;color:var(--mu);min-width:100px;flex-shrink:0}
+.bar-track{flex:1;height:9px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width 1.3s cubic-bezier(.22,1,.36,1)}
+.bar-val{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;min-width:70px;text-align:right;flex-shrink:0}
+
+/* VEHICLE CARDS */
+.vs-card{background:var(--c2);border:1px solid var(--bdr);border-radius:10px;padding:1rem;margin-bottom:.6rem;transition:all .2s}
+.vs-card:hover{border-color:rgba(0,232,122,.2);background:rgba(16,24,40,.8)}
+.vs-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.vs-id{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
+.vs-row{display:flex;gap:1.1rem;font-size:.73rem;color:var(--mu);flex-wrap:wrap;align-items:center}
+
+/* FEEDBACK */
+.fb-item{background:var(--c2);border:1px solid var(--bdr);border-radius:10px;padding:.9rem;margin-bottom:.65rem}
+.fb-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.35rem}
+
+/* EARNINGS TABLE ROW */
+.er{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--bdr);font-size:.83rem}
+.er:last-child{border:none;padding-top:.7rem}
+.ek{color:var(--mu)}.ev{font-weight:600}
+
+/* LOGIN */
+.login-w{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;background:radial-gradient(ellipse at 50% 20%,rgba(59,130,246,.06),transparent 55%),var(--bg)}
+.login-c{background:var(--card);border:1px solid var(--bdr);border-radius:16px;padding:1.8rem;width:100%;max-width:360px;margin-top:1.4rem}
+
+/* TOAST */
+.toast{position:fixed;top:68px;right:1.5rem;background:rgba(12,18,32,.97);border:1px solid var(--bdr);color:var(--w);padding:.65rem 1.2rem;border-radius:10px;font-size:.8rem;z-index:700;opacity:0;transition:all .28s;pointer-events:none;backdrop-filter:blur(12px);max-width:280px}
+.toast.show{opacity:1}
+.toast.err{border-color:rgba(240,68,56,.4);color:var(--red)}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:400;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:1rem}
+.modal-bg.open{display:flex}
+.modal{background:#0c1220;border:1px solid var(--bdr);border-radius:16px;padding:1.5rem;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;animation:mIn .25s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.m-close{float:right;background:none;border:none;color:var(--mu);cursor:pointer;font-size:1.2rem;line-height:1}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div class="login-w" id="loginW">
+  <div style="font-family:'Syne',sans-serif;font-size:2.8rem;font-weight:800">CATA<em style="color:var(--green);font-style:normal">TU</em></div>
+  <div style="font-size:.8rem;color:var(--mu);margin:.1rem 0 .8rem">🏢 Admin &amp; Operations Dashboard</div>
+  <div style="display:flex;gap:.5rem;margin-bottom:.3rem">
+    <span class="chip cg">Fleet Monitor</span>
+    <span class="chip cgold">Revenue</span>
+    <span class="chip cb">Analytics</span>
+  </div>
+  <div class="login-c">
+    <div class="fld"><label>Admin Name</label><input id="an" type="text" placeholder="Operations Manager" autocomplete="name"></div>
+    <div class="fld"><label>Admin Password</label><input id="ap" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')aLogin()"></div>
+    <div style="font-size:.72rem;color:var(--mu);background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:.7rem;margin-bottom:.9rem;line-height:1.55">ℹ️ Demo: Enter any name + password (6+ chars) to access</div>
+    <button class="btn btn-g btn-full" onclick="aLogin()" style="margin-bottom:.8rem">Access Dashboard →</button>
+    <div style="text-align:center;font-size:.72rem;color:var(--mu)">
+      <a href="passenger.html" style="color:var(--green)">Passenger App</a> &nbsp;·&nbsp; <a href="driver.html" style="color:var(--gold)">Driver Portal</a>
+    </div>
+  </div>
+</div>
+
+<!-- APP LAYOUT -->
+<div class="layout" id="app" style="display:none">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:1rem">
+      <div class="brand">CATA<em>TU</em></div>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:rgba(212,168,67,.1);color:var(--gold);border:1px solid rgba(212,168,67,.2);padding:.22rem .6rem;border-radius:20px">Admin Panel</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:.9rem">
+      <div class="live-pill"><span class="ld"></span>Live</div>
+      <span style="font-size:.82rem;color:var(--mu)" id="aTbName">Admin</span>
+      <button class="btn btn-o btn-sm" onclick="aLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-label">Operations</div>
+    <button class="sbl on" id="sb-overview" onclick="nav('overview')"><span class="sbl-i">📊</span>Overview</button>
+    <button class="sbl" id="sb-fleet" onclick="nav('fleet')"><span class="sbl-i">🚐</span>Live Fleet</button>
+    <button class="sbl" id="sb-bookings" onclick="nav('bookings')"><span class="sbl-i">🎫</span>All Bookings</button>
+    <div class="sep"></div>
+    <div class="sb-label">Finance</div>
+    <button class="sbl" id="sb-revenue" onclick="nav('revenue')"><span class="sbl-i">💰</span>Revenue</button>
+    <button class="sbl" id="sb-occupancy" onclick="nav('occupancy')"><span class="sbl-i">📈</span>Occupancy</button>
+    <button class="sbl" id="sb-receipts" onclick="nav('receipts')"><span class="sbl-i">🧾</span>Receipts</button>
+    <div class="sep"></div>
+    <div class="sb-label">Quality</div>
+    <button class="sbl" id="sb-feedback" onclick="nav('feedback')"><span class="sbl-i">⭐</span>Feedback</button>
+    <button class="sbl" id="sb-drivers" onclick="nav('drivers')"><span class="sbl-i">👨‍✈️</span>Drivers</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content" id="content">
+
+    <!-- ═══ OVERVIEW ═══ -->
+    <div class="screen act" id="s-overview">
+      <div class="pg-title">Operations Overview</div>
+      <div class="pg-sub" id="ovDate">Loading…</div>
+      <div class="col-4" id="kpiRow"></div>
+      <div class="col-2">
+        <div>
+          <span class="sl">Fleet Status — All Vehicles</span>
+          <div id="ovFleet"></div>
+        </div>
+        <div>
+          <span class="sl">Revenue by Route</span>
+          <div class="card cbody" id="ovRevChart"></div>
+        </div>
+      </div>
+      <span class="sl">Recent Bookings</span>
+      <div class="tbl-scroll">
+        <table class="tbl"><thead><tr><th>Booking Ref</th><th>Passenger</th><th>Route</th><th>Seat</th><th>Stop</th><th>Amount</th><th>Status</th><th>Boarded</th></tr></thead>
+        <tbody id="ovBkBody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ═══ FLEET ═══ -->
+    <div class="screen" id="s-fleet">
+      <div class="pg-title">Live Fleet Monitoring</div>
+      <div class="pg-sub">Real-time GPS positions of all 5 CATATU electric vehicles</div>
+      <!-- EV Bus image strip -->
+      <div style="display:flex;gap:.7rem;overflow-x:auto;padding:.4rem 0;margin-bottom:1rem;scrollbar-width:none">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/BYD_K9_electric_bus_2019.jpg/320px-BYD_K9_electric_bus_2019.jpg" alt="BYD Electric Bus" style="height:80px;border-radius:10px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0" onerror="this.style.display='none'">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Yutong_E12_bus_Paris_2022.jpg/320px-Yutong_E12_bus_Paris_2022.jpg" alt="Yutong Electric Bus" style="height:80px;border-radius:10px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0" onerror="this.style.display='none'">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Higer_electric_bus_2021.jpg/320px-Higer_electric_bus_2021.jpg" alt="Higer EV Bus" style="height:80px;border-radius:10px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0" onerror="this.style.display='none'">
+      </div>
+      <div id="adminMap" style="margin-bottom:1.1rem"></div>
+      <div class="card cbody">
+        <div class="card-t"><em>All Vehicles</em> — Live Status</div>
+        <div class="tbl-scroll">
+          <table class="tbl"><thead><tr><th>Van</th><th>Driver</th><th>Route</th><th>Status</th><th>Speed</th><th>Passengers</th><th>Current Stop</th><th>Occupancy</th><th>Last Ping</th></tr></thead>
+          <tbody id="fleetTbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BOOKINGS ═══ -->
+    <div class="screen" id="s-bookings">
+      <div class="pg-title">All Bookings</div>
+      <div class="pg-sub">Complete booking database with seat and payment verification</div>
+      <div style="display:flex;gap:.7rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end">
+        <div class="fld" style="margin:0;flex:1;min-width:160px"><label>Filter Route</label>
+          <select id="bkRteFilter" onchange="loadBookings()">
+            <option value="">All Routes</option>
+            <option value="R1">Zone A Express</option><option value="R2">Zone B Academic</option>
+            <option value="R3">Zone E Long Haul</option><option value="R4">Zone C Connect</option><option value="R5">Zone D Karen</option>
+          </select>
+        </div>
+        <div class="fld" style="margin:0;min-width:140px"><label>Date</label><input type="date" id="bkDateFilter" onchange="loadBookings()"></div>
+        <div class="fld" style="margin:0"><label>Status</label>
+          <select id="bkStatusFilter" onchange="loadBookings()"><option value="">All</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select>
+        </div>
+        <button class="btn btn-o btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+      <div id="bkSummary" style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem"></div>
+      <div class="tbl-scroll">
+        <table class="tbl"><thead><tr>
+          <th>Booking Ref</th><th>Passenger</th><th>Phone</th><th>Route</th><th>Seat</th><th>Boarding Stop</th><th>Amount (KSH)</th><th>M-Pesa Code</th><th>Payment</th><th>Boarded</th><th>Date</th>
+        </tr></thead>
+        <tbody id="bkTbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ═══ REVENUE ═══ -->
+    <div class="screen" id="s-revenue">
+      <div class="pg-title">Revenue &amp; Financials</div>
+      <div class="pg-sub">Gross revenue, driver costs (70%), and CATATU net income (30%)</div>
+      <div class="col-3" id="revKpis"></div>
+      <div class="col-2">
+        <div class="card cbody">
+          <div class="card-t"><em>Revenue</em> by Route</div>
+          <div id="revByRoute"></div>
+        </div>
+        <div class="card cbody">
+          <div class="card-t">Financial Breakdown</div>
+          <div id="finBreak"></div>
+        </div>
+      </div>
+      <div class="card cbody">
+        <div class="card-t"><em>Weekly</em> Revenue Trend</div>
+        <div id="weeklyRevChart"></div>
+      </div>
+    </div>
+
+    <!-- ═══ OCCUPANCY ═══ -->
+    <div class="screen" id="s-occupancy">
+      <div class="pg-title">Bus Occupancy Rates</div>
+      <div class="pg-sub">Seat utilisation and capacity monitoring across all routes</div>
+      <div class="col-3" id="occKpis"></div>
+      <div class="col-2">
+        <div class="card cbody">
+          <div class="card-t"><em>Occupancy</em> by Route (Today)</div>
+          <div id="occBars"></div>
+        </div>
+        <div class="card cbody">
+          <div class="card-t">Booked vs Walk-in Split</div>
+          <div id="walkSplit"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ RECEIPTS ═══ -->
+    <div class="screen" id="s-receipts">
+      <div class="pg-title">Receipt Tracker</div>
+      <div class="pg-sub">All M-Pesa payments with seat status verification</div>
+      <div style="display:flex;gap:.7rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end">
+        <div class="fld" style="margin:0;flex:1;min-width:200px"><label>Search Booking Ref or M-Pesa Code</label>
+          <input id="rcSearch" type="text" placeholder="Type to search…" oninput="loadReceipts()" style="text-transform:uppercase">
+        </div>
+        <button class="btn btn-o btn-sm" onclick="loadReceipts()">🔍 Search</button>
+      </div>
+      <div class="tbl-scroll">
+        <table class="tbl"><thead><tr>
+          <th>Booking Ref</th><th>Passenger</th><th>Seat</th><th>Route</th><th>Amount</th><th>M-Pesa Code</th><th>Payment</th><th>Seat Status</th><th>Boarded</th><th>Date</th>
+        </tr></thead>
+        <tbody id="rcTbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ═══ FEEDBACK ═══ -->
+    <div class="screen" id="s-feedback">
+      <div class="pg-title">Passenger Feedback</div>
+      <div class="pg-sub">All passenger reviews and service quality data</div>
+      <div class="col-3" id="fbKpis"></div>
+      <div class="col-2">
+        <div>
+          <span class="sl">All Reviews</span>
+          <div id="fbList"></div>
+        </div>
+        <div>
+          <span class="sl">Rating Distribution</span>
+          <div class="card cbody" id="ratingDist"></div>
+          <div class="card cbody" style="margin-top:.9rem">
+            <div class="card-t"><em>Quality</em> Alerts</div>
+            <div id="fbAlerts"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DRIVERS ═══ -->
+    <div class="screen" id="s-drivers">
+      <div class="pg-title">Driver Operations</div>
+      <div class="pg-sub">Roster, performance, agreements and backup assignments</div>
+      <div class="col-2">
+        <div class="card cbody">
+          <div class="card-t"><em>Driver</em> Roster</div>
+          <table class="tbl">
+            <thead><tr><th>Name</th><th>Van</th><th>Route</th><th>Shift</th><th>Status</th><th>Rating</th></tr></thead>
+            <tbody id="driverRoster"></tbody>
+          </table>
+        </div>
+        <div>
+          <div class="card cbody" style="margin-bottom:1rem">
+            <div class="card-t"><em>Operational</em> Rules</div>
+            <div style="display:flex;flex-direction:column;gap:.65rem;font-size:.82rem;line-height:1.65">
+              <div style="background:rgba(0,232,122,.05);border:1px solid rgba(0,232,122,.12);border-radius:9px;padding:.85rem">
+                <div style="color:var(--green);font-weight:700;margin-bottom:.2rem">📋 Priority Rule</div>
+                <div style="color:var(--mu)">Pre-booked passengers board FIRST. Walk-ins fill remaining seats only after all booked passengers are verified.</div>
+              </div>
+              <div style="background:rgba(212,168,67,.05);border:1px solid rgba(212,168,67,.12);border-radius:9px;padding:.85rem">
+                <div style="color:var(--gold);font-weight:700;margin-bottom:.2rem">🔄 Backup Drivers</div>
+                <div style="color:var(--mu)">Every route must have a registered backup driver on standby. Backup must be available within 30 minutes of primary driver's missed shift.</div>
+              </div>
+              <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:9px;padding:.85rem">
+                <div style="color:#60a5fa;font-weight:700;margin-bottom:.2rem">📝 Agreements</div>
+                <div style="color:var(--mu)">All drivers must sign time-slot agreements before route assignment. Agreements specify departure times, stops, and passenger capacity.</div>
+              </div>
+              <div style="background:rgba(240,68,56,.05);border:1px solid rgba(240,68,56,.12);border-radius:9px;padding:.85rem">
+                <div style="color:var(--red);font-weight:700;margin-bottom:.2rem">⭐ Feedback Policy</div>
+                <div style="color:var(--mu)">Drivers with rating below 3.5/5 are automatically flagged. Rating below 3.0 triggers mandatory review before next shift.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /layout -->
+
+<!-- MOBILE BOTTOM NAV -->
+<div class="mbnav" id="mBnav">
+  <button class="mbn on" id="mb-overview" onclick="nav('overview')"><div class="mbn-i">📊</div><div class="mbn-l">Overview</div></button>
+  <button class="mbn" id="mb-fleet" onclick="nav('fleet')"><div class="mbn-i">🚐</div><div class="mbn-l">Fleet</div></button>
+  <button class="mbn" id="mb-bookings" onclick="nav('bookings')"><div class="mbn-i">🎫</div><div class="mbn-l">Bookings</div></button>
+  <button class="mbn" id="mb-revenue" onclick="nav('revenue')"><div class="mbn-i">💰</div><div class="mbn-l">Revenue</div></button>
+  <button class="mbn" id="mb-feedback" onclick="nav('feedback')"><div class="mbn-i">⭐</div><div class="mbn-l">Feedback</div></button>
+</div>
+
+<!-- BOOKING DETAIL MODAL -->
+<div class="modal-bg" id="bkModal">
+  <div class="modal">
+    <button class="m-close" onclick="closeBkModal()">✕</button>
+    <div id="bkModalContent"></div>
+  </div>
+</div>
+
+<script>
+// ═══ CONSTANTS ═══
+const ROUTES=[
+  {id:'R1',name:'Zone A Express',from:'Donholm / Taj Mall',to:'Strathmore University',stops:['Taj Mall','Greenspan Mall','Nyayo Estate','Donholm Stage','Upperhill','Strathmore University'],departs:'6:30 AM',fare:200,color:'#3b82f6',van:'CV-001',driver:'James Kamau',backup:'Eric Weru',lat:-1.310,lng:36.878},
+  {id:'R2',name:'Zone B Academic',from:'Kilimani / Lavington',to:'University of Nairobi',stops:['Hurlingham','Kilimani Rd','Valley Arcade','Lavington','University of Nairobi'],departs:'6:45 AM',fare:300,color:'#22c55e',van:'CV-002',driver:'Peter Omondi',backup:'Collins Otieno',lat:-1.282,lng:36.803},
+  {id:'R3',name:'Zone E Long Haul',from:'TRM / Roysambu',to:'Daystar University',stops:['TRM Mall','Roysambu','Garden City','Syokimau','Daystar University'],departs:'6:00 AM',fare:450,color:'#a855f7',van:'CV-003',driver:'Samuel Njoroge',backup:'Isaac Kamau',lat:-1.265,lng:36.870},
+  {id:'R4',name:'Zone C Connect',from:'Ruaka / Two Rivers',to:'Riara University',stops:['Two Rivers','Ruaka Rd','Muthaiga','Westlands','Riara University'],departs:'6:30 AM',fare:350,color:'#f97316',van:'CV-004',driver:'David Mwangi',backup:'Brian Karanja',lat:-1.233,lng:36.812},
+  {id:'R5',name:'Zone D Karen',from:'Karen / Rongai',to:'Strathmore University',stops:['Rongai Stage','Hardy','Karen Centre','Langata Rd','Strathmore University'],departs:'5:50 AM',fare:400,color:'#ef4444',van:'CV-005',driver:'John Kariuki',backup:'Patrick Mugo',lat:-1.340,lng:36.737},
+];
+const UNI_LOGOS={
+  STR:'https://upload.wikimedia.org/wikipedia/en/thumb/0/05/Strathmore_University_logo.svg/120px-Strathmore_University_logo.svg.png',
+  UON:'https://upload.wikimedia.org/wikipedia/en/thumb/8/82/University_of_Nairobi_Logo.png/120px-University_of_Nairobi_Logo.png',
+  DAY:'https://upload.wikimedia.org/wikipedia/en/2/23/Daystar_University_logo.jpg',
+  RIA:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQkxsWuGKDxOYpXpjHDO-lsTqXYtLo4-YaLwg&s',
+};
+const ROUTE_UNI={R1:'STR',R2:'UON',R3:'DAY',R4:'RIA',R5:'STR'};
+
+// Simulated live positions — Firebase-ready: replace with db.ref('vehicles').on('value', snap => {...})
+const LIVE=ROUTES.map((r,i)=>({
+  ...r, spd:Math.round(30+Math.random()*40), pax:Math.round(8+Math.random()*16),
+  stop:Math.floor(Math.random()*r.stops.length), status:['moving','moving','moving','idle','moving'][i],
+  lastPing:Math.floor(Math.random()*4)+1
+}));
+
+let admin=null,adminMap=null,busMarkers={},refreshInt=null;
+
+// ═══ DB ═══
+async function dbG(k){try{if(window.storage){const r=await window.storage.get('ct_'+k);return r?JSON.parse(r.value):null;}return JSON.parse(localStorage.getItem('ct_'+k)||'null');}catch{return null;}}
+async function getAllBk(){return(await dbG('bookings'))||[];}
+async function getTrips(){return(await dbG('trips'))||[];}
+async function getFeedback(){return(await dbG('feedback'))||[];}
+
+// ═══ AUTH ═══
+function aLogin(){
+  const n=document.getElementById('an').value.trim();const p=document.getElementById('ap').value;
+  if(!n){toast('Enter your name','err');return;}
+  if(p.length<6){toast('Password must be 6+ characters','err');return;}
+  admin={name:n};document.getElementById('loginW').style.display='none';document.getElementById('app').style.display='grid';
+  document.getElementById('aTbName').textContent=n;
+  boot();
+}
+function aLogout(){document.getElementById('app').style.display='none';document.getElementById('loginW').style.display='flex';}
+
+async function boot(){
+  const today=new Date();document.getElementById('ovDate').textContent=`${today.toLocaleDateString('en-KE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})} · Auto-refreshes every 15s`;
+  document.getElementById('bkDateFilter').value=today.toISOString().split('T')[0];
+  await loadOverview();
+  refreshInt=setInterval(()=>{simUpdate();if(document.getElementById('s-fleet').classList.contains('act'))updateFleetTable();},8000);
+}
+
+// ═══ NAV ═══
+function nav(s){
+  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('act'));
+  document.querySelectorAll('.sbl,.mbn').forEach(x=>x.classList.remove('on'));
+  document.getElementById('s-'+s).classList.add('act');
+  ['sb-','mb-'].forEach(p=>{const b=document.getElementById(p+s);if(b)b.classList.add('on');});
+  document.getElementById('content').scrollTo({top:0,behavior:'instant'});
+  if(s==='overview')loadOverview();
+  if(s==='fleet')loadFleet();
+  if(s==='bookings')loadBookings();
+  if(s==='revenue')loadRevenue();
+  if(s==='occupancy')loadOccupancy();
+  if(s==='receipts')loadReceipts();
+  if(s==='feedback')loadFeedback();
+  if(s==='drivers')loadDrivers();
+}
+
+// ═══ GPS SIMULATION ═══
+function simUpdate(){
+  LIVE.forEach(v=>{
+    if(v.status==='moving'){v.lat+=(Math.random()-.5)*.0015;v.lng+=(Math.random()-.5)*.0015;v.spd=Math.round(28+Math.random()*40);}
+    v.pax=Math.min(24,Math.max(0,v.pax+Math.round((Math.random()-.3)*2)));
+    if(busMarkers[v.id])busMarkers[v.id].setLatLng([v.lat,v.lng]);
+  });
+}
+
+// ═══ OVERVIEW ═══
+async function loadOverview(){
+  const bks=await getAllBk();const trips=await getTrips();const fb=await getFeedback();
+  const today=new Date().toISOString().split('T')[0];
+  const todayBks=bks.filter(b=>b.date===today);const totalRev=todayBks.reduce((s,b)=>s+(b.amount||0),0);
+  const boarded=bks.filter(b=>b.boarded).length;const avgRating=fb.length?fb.reduce((s,f)=>s+f.rating,0)/fb.length:0;
+  document.getElementById('kpiRow').innerHTML=[
+    {cls:'kg',ico:'🎫',n:bks.length.toLocaleString(),l:'Total Bookings',sub:`${todayBks.length} today`},
+    {cls:'kgold',ico:'💰',n:'KSH '+totalRev.toLocaleString(),l:'Revenue Today',sub:`30% → KSH ${Math.round(totalRev*.3).toLocaleString()} CATATU`},
+    {cls:'kb',ico:'🚐',n:`${LIVE.filter(v=>v.status==='moving').length}/5`,l:'Active Buses',sub:'Live GPS tracked'},
+    {cls:'kred',ico:'⭐',n:avgRating?avgRating.toFixed(1):'—',l:'Avg Rating',sub:`${fb.length} reviews`},
+  ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-ico">${k.ico}</div><div class="kpi-n">${k.n}</div><div class="kpi-l">${k.l}</div><div class="kpi-sub" style="color:var(--mu)">${k.sub}</div></div>`).join('');
+
+  // Fleet status mini
+  document.getElementById('ovFleet').innerHTML=LIVE.map(v=>`
+    <div class="vs-card" onclick="nav('fleet')">
+      <div class="vs-top">
+        <div><span class="vs-id">${v.van}</span> <span style="font-size:.75rem;color:var(--mu);margin-left:.3rem">${v.driver}</span></div>
+        <span class="chip ${v.status==='moving'?'cg':v.status==='idle'?'cgold':'cr'}">${v.status==='moving'?'● Moving':v.status==='idle'?'⏸ Idle':'Offline'}</span>
+      </div>
+      <div class="vs-row">
+        <span>🗺 ${v.name}</span><span>👥 ${v.pax}/24</span><span>⚡ ${v.status==='moving'?v.spd+'km/h':'0 km/h'}</span>
+        <span>📍 ${v.stops[v.stop]||'—'}</span>
+      </div>
+    </div>`).join('');
+
+  // Route revenue chart
+  const maxRev=Math.max(...ROUTES.map(r=>r.fare*Math.round(8+Math.random()*16)),1);
+  document.getElementById('ovRevChart').innerHTML=`<div class="card-t"><em>Route</em> Breakdown</div>`+ROUTES.map(r=>{
+    const rv=r.fare*LIVE.find(v=>v.id===r.id)?.pax||r.fare*12;const logoKey=ROUTE_UNI[r.id];const logo=UNI_LOGOS[logoKey]||'';
+    return`<div class="bar-row">
+      <div class="bar-lbl" style="display:flex;align-items:center;gap:.35rem">
+        ${logo?`<img src="${logo}" style="width:18px;height:18px;object-fit:contain;background:#fff;border-radius:3px;padding:1px" onerror="this.style.display='none'">`:``}
+        <span style="font-size:.72rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:75px" title="${r.name}">${r.name.split(' ').slice(-1)[0]}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(rv/maxRev*100)}%;background:${r.color}"></div></div>
+      <span class="bar-val" style="color:${r.color}">KSH ${(rv).toLocaleString()}</span>
+    </div>`;}).join('');
+
+  // Recent bookings
+  document.getElementById('ovBkBody').innerHTML=bks.slice(-15).reverse().map(b=>{
+    const r=ROUTES.find(x=>x.id===b.routeId)||{};
+    return`<tr>
+      <td><span style="font-family:monospace;font-size:.75rem;color:var(--mu)">${b.id}</span></td>
+      <td><strong>${b.name}</strong></td>
+      <td><span style="color:${r.color||'var(--green)'}">${r.name||'—'}</span></td>
+      <td><span class="chip cgold">Seat ${b.seat}</span></td>
+      <td style="font-size:.76rem;color:var(--mu)">${b.boardingStop||'—'}</td>
+      <td><strong style="color:var(--green)">KSH ${b.amount}</strong></td>
+      <td><span class="chip ${b.status==='confirmed'?'cg':'cr'}">${b.status}</span></td>
+      <td><span class="chip ${b.boarded?'cg':'cdim'}">${b.boarded?'✓ Boarded':'Pending'}</span></td>
+    </tr>`;}).join('');
+}
+
+// ═══ FLEET ═══
+function loadFleet(){
+  // Map
+  if(adminMap){adminMap.remove();adminMap=null;busMarkers={};}
+  const center=[-1.295,36.83];
+  setTimeout(()=>{
+    adminMap=L.map('adminMap',{center,zoom:12,zoomControl:true,attributionControl:false});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMap);
+    LIVE.forEach(v=>{
+      const ico=L.divIcon({html:`<div style="width:36px;height:36px;border-radius:50%;background:#05080f;border:3px solid ${v.color};display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 0 6px ${v.color}22,0 4px 16px rgba(0,0,0,.5)" title="${v.van}">🚐</div>`,className:'',iconSize:[36,36],iconAnchor:[18,18]});
+      busMarkers[v.id]=L.marker([v.lat,v.lng],{icon:ico}).addTo(adminMap);
+      busMarkers[v.id].bindPopup(`<b style="color:${v.color}">${v.van} — ${v.name}</b><br>Driver: ${v.driver}<br>Passengers: ${v.pax}/24<br>Speed: ${v.spd} km/h<br>Stop: ${v.stops[v.stop]||'—'}`);
+      // Route stop markers
+      v.stops.forEach((s,i)=>{
+        const slat=v.lat+(i-2)*.007,slng=v.lng-(i*.006);
+        const si=L.divIcon({html:`<div style="width:14px;height:14px;border-radius:50%;background:#05080f;border:2px solid ${v.color}60;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:${v.color}">${i+1}</div>`,className:'',iconSize:[14,14],iconAnchor:[7,7]});
+        L.marker([slat,slng],{icon:si}).addTo(adminMap).bindPopup(`${v.name}: ${s}`);
+      });
+    });
+    updateFleetTable();
+  },250);
+}
+
+function updateFleetTable(){
+  document.getElementById('fleetTbody').innerHTML=LIVE.map(v=>`<tr>
+    <td><strong style="color:${v.color}">${v.van}</strong></td>
+    <td>${v.driver}</td>
+    <td><span style="font-size:.76rem">${v.name}</span></td>
+    <td><span class="chip ${v.status==='moving'?'cg':v.status==='idle'?'cgold':'cr'}">${v.status==='moving'?'● Moving':v.status==='idle'?'⏸ Idle':'Offline'}</span></td>
+    <td>${v.status==='moving'?v.spd+' km/h':'—'}</td>
+    <td><strong>${v.pax}</strong>/24 <div style="display:inline-block;width:40px;height:5px;background:rgba(255,255,255,.07);border-radius:3px;vertical-align:middle;margin-left:.3rem;overflow:hidden"><div style="height:100%;width:${Math.round(v.pax/24*100)}%;background:${v.color};border-radius:3px"></div></div></td>
+    <td style="font-size:.76rem;color:var(--mu)">${v.stops[v.stop]||'—'}</td>
+    <td><span class="chip ${v.pax/24>.8?'cg':v.pax/24>.5?'cgold':'cr'}">${Math.round(v.pax/24*100)}%</span></td>
+    <td style="font-size:.74rem;color:var(--mu)">${v.lastPing||1}m ago</td>
+  </tr>`).join('');
+}
+
+// ═══ BOOKINGS ═══
+async function loadBookings(){
+  const bks=await getAllBk();
+  const rte=document.getElementById('bkRteFilter').value;
+  const date=document.getElementById('bkDateFilter').value;
+  const status=document.getElementById('bkStatusFilter').value;
+  let filtered=bks;
+  if(rte)filtered=filtered.filter(b=>b.routeId===rte);
+  if(date)filtered=filtered.filter(b=>b.date===date);
+  if(status)filtered=filtered.filter(b=>b.status===status);
+  const boarded=filtered.filter(b=>b.boarded).length;const rev=filtered.reduce((s,b)=>s+(b.amount||0),0);
+  document.getElementById('bkSummary').innerHTML=[
+    `<span class="chip cb">${filtered.length} Bookings</span>`,
+    `<span class="chip cg">${boarded} Boarded</span>`,
+    `<span class="chip cdim">${filtered.length-boarded} Pending</span>`,
+    `<span class="chip cgold">KSH ${rev.toLocaleString()} Revenue</span>`,
+  ].join('');
+  document.getElementById('bkTbody').innerHTML=filtered.length?filtered.slice().reverse().map(b=>{
+    const r=ROUTES.find(x=>x.id===b.routeId)||{};const ukey=ROUTE_UNI[b.routeId];const logo=UNI_LOGOS[ukey]||'';
+    return`<tr onclick="showBkDetail('${b.id}')" style="cursor:pointer">
+      <td><span style="font-family:monospace;font-size:.74rem">${b.id}</span></td>
+      <td><strong>${b.name}</strong><div style="font-size:.7rem;color:var(--mu)">${b.phone}</div></td>
+      <td>${b.phone}</td>
+      <td><div style="display:flex;align-items:center;gap:.35rem"><span style="width:8px;height:8px;border-radius:50%;background:${r.color||'#fff'};flex-shrink:0"></span><span style="font-size:.76rem">${r.name||'—'}</span>${logo?`<img src="${logo}" style="width:16px;height:16px;object-fit:contain;background:#fff;border-radius:3px;padding:1px" onerror="this.style.display='none'">`:''}
+      </div></td>
+      <td><span class="chip cgold">Seat ${b.seat}</span></td>
+      <td style="font-size:.76rem;color:var(--mu)">${b.boardingStop||'—'}</td>
+      <td><strong style="color:var(--green)">KSH ${b.amount}</strong></td>
+      <td><span style="font-family:monospace;font-size:.74rem;color:var(--mu)">${b.mpesaRef||'—'}</span></td>
+      <td><span class="chip ${b.status==='confirmed'?'cg':'cr'}">${b.status}</span></td>
+      <td><span class="chip ${b.boarded?'cg':'cdim'}">${b.boarded?'✓':'Pending'}</span></td>
+      <td style="font-size:.76rem;color:var(--mu)">${b.date}</td>
+    </tr>`;}).join(''):`<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--mu)">No bookings found</td></tr>`;
+}
+
+let _allBkCache=[];
+async function showBkDetail(id){
+  if(!_allBkCache.length)_allBkCache=await getAllBk();
+  const b=_allBkCache.find(x=>x.id===id);if(!b)return;
+  const r=ROUTES.find(x=>x.id===b.routeId)||{};
+  const qrUrl=`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(JSON.stringify({ref:b.id,seat:b.seat,route:b.routeId}))}&bgcolor=0c1220&color=00e87a&margin=6`;
+  document.getElementById('bkModalContent').innerHTML=`
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.15rem;color:var(--green);margin-bottom:1rem">Booking Detail — ${b.id}</div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+      <img src="${qrUrl}" style="width:110px;height:110px;border-radius:8px;border:1px solid var(--bdr)">
+      <div style="flex:1">
+        ${[['Passenger',b.name],['Phone',b.phone],['Email',b.email||'—'],['Route',r.name||'—'],['Seat',`Seat ${b.seat}`],['Boarding Stop',b.boardingStop],['M-Pesa',b.mpesaRef],['Amount',`KSH ${b.amount}`],['Date',b.date],['Status',b.status],['Boarded',b.boarded?'✓ Yes':'No']].map(([k,v])=>`
+          <div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--bdr);font-size:.82rem">
+            <span style="color:var(--mu)">${k}</span>
+            <span style="font-weight:600;color:${k==='Boarded'?(b.boarded?'var(--green)':'var(--gold)'):k==='Status'?(b.status==='confirmed'?'var(--green)':'var(--red)'):'var(--w)'}">${v}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <button class="btn btn-o btn-sm btn-full" onclick="closeBkModal()">Close</button>`;
+  document.getElementById('bkModal').classList.add('open');
+}
+function closeBkModal(){document.getElementById('bkModal').classList.remove('open');}
+
+async function exportCSV(){
+  const bks=await getAllBk();
+  const hdr=['Booking Ref','Passenger','Phone','Email','Route','Seat','Boarding Stop','Amount','M-Pesa','Date','Status','Boarded'];
+  const rows=bks.map(b=>{const r=ROUTES.find(x=>x.id===b.routeId)||{};return[b.id,b.name,b.phone,b.email||'',r.name||'',b.seat,b.boardingStop,b.amount,b.mpesaRef,b.date,b.status,b.boarded?'Yes':'No'].join(',');});
+  const csv=[hdr.join(','),...rows].join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`catatu_bookings_${new Date().toISOString().split('T')[0]}.csv`;a.click();
+  toast('CSV exported ✓');
+}
+
+// ═══ REVENUE ═══
+async function loadRevenue(){
+  const bks=await getAllBk();const trips=await getTrips();
+  const total=bks.reduce((s,b)=>s+(b.amount||0),0);
+  const driverShare=Math.round(total*.7);const coShare=Math.round(total*.3);
+  const today=new Date().toISOString().split('T')[0];const todayRev=bks.filter(b=>b.date===today).reduce((s,b)=>s+(b.amount||0),0);
+  document.getElementById('revKpis').innerHTML=[
+    {cls:'kgold',n:'KSH '+total.toLocaleString(),l:'Gross Revenue (All Time)',sub:`${bks.length} paid bookings`},
+    {cls:'kg',n:'KSH '+driverShare.toLocaleString(),l:'Driver Payouts (70%)',sub:'Across all drivers'},
+    {cls:'kb',n:'KSH '+coShare.toLocaleString(),l:'CATATU Net (30%)',sub:`Today: KSH ${Math.round(todayRev*.3).toLocaleString()}`},
+  ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-n">${k.n}</div><div class="kpi-l">${k.l}</div><div class="kpi-sub" style="color:var(--mu)">${k.sub}</div></div>`).join('');
+
+  // By route
+  const maxR=Math.max(...ROUTES.map(r=>bks.filter(b=>b.routeId===r.id).reduce((s,b)=>s+(b.amount||0),0)),1);
+  document.getElementById('revByRoute').innerHTML=ROUTES.map(r=>{
+    const rv=bks.filter(b=>b.routeId===r.id).reduce((s,b)=>s+(b.amount||0),0);
+    const ukey=ROUTE_UNI[r.id];const logo=UNI_LOGOS[ukey]||'';
+    return`<div class="bar-row">
+      <div class="bar-lbl" style="display:flex;align-items:center;gap:.35rem">
+        ${logo?`<img src="${logo}" style="width:18px;height:18px;object-fit:contain;background:#fff;border-radius:3px;padding:1px" onerror="this.style.display='none'">`:``}
+        <span style="font-size:.72rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px">${r.name.replace('Zone ','Z')}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(rv/maxR*100)}%;background:${r.color}"></div></div>
+      <span class="bar-val" style="color:${r.color}">KSH ${rv.toLocaleString()}</span>
+    </div>`;}).join('');
+
+  // breakdown
+  document.getElementById('finBreak').innerHTML=[
+    ['Gross Revenue','KSH '+total.toLocaleString(),'var(--green)'],
+    ['Driver Costs (70%)','- KSH '+driverShare.toLocaleString(),'var(--red)'],
+    ['CATATU Net (30%)','KSH '+coShare.toLocaleString(),'var(--gold)'],
+    ['Avg per Booking','KSH '+(bks.length?Math.round(total/bks.length):0),'var(--blue)'],
+  ].map(([k,v,c])=>`<div class="er"><span class="ek">${k}</span><span class="ev" style="color:${c}">${v}</span></div>`).join('');
+
+  // Weekly (simulated)
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const fake=[4200,5800,3900,6100,5400,7200,todayRev||4800];const mx=Math.max(...fake,1);
+  document.getElementById('weeklyRevChart').innerHTML=fake.map((v,i)=>`<div class="bar-row">
+    <span class="bar-lbl">${days[i]}</span>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/mx*100)}%;background:var(--green)"></div></div>
+    <span class="bar-val" style="color:var(--green)">KSH ${(v/1000).toFixed(1)}K</span>
+  </div>`).join('');
+}
+
+// ═══ OCCUPANCY ═══
+async function loadOccupancy(){
+  const bks=await getAllBk();const today=new Date().toISOString().split('T')[0];
+  const totalSeats=ROUTES.length*24;const totalBooked=bks.length;const avgOcc=Math.round(totalBooked/totalSeats*100);
+  document.getElementById('occKpis').innerHTML=[
+    {cls:'kg',n:avgOcc+'%',l:'Average Occupancy',sub:'Across all routes'},
+    {cls:'kgold',n:totalBooked,l:'Total Seats Booked',sub:`of ${totalSeats} total`},
+    {cls:'kb',n:totalSeats-totalBooked,l:'Available Seats',sub:'Across all routes'},
+  ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-n">${k.n}</div><div class="kpi-l">${k.l}</div><div class="kpi-sub" style="color:var(--mu)">${k.sub}</div></div>`).join('');
+
+  const maxBk=Math.max(...ROUTES.map(r=>bks.filter(b=>b.routeId===r.id).length),1);
+  document.getElementById('occBars').innerHTML=ROUTES.map(r=>{
+    const n=bks.filter(b=>b.routeId===r.id&&b.date===today).length;const pct=Math.round(n/24*100);
+    const ukey=ROUTE_UNI[r.id];const logo=UNI_LOGOS[ukey]||'';
+    return`<div style="margin-bottom:.9rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.3rem;font-size:.78rem;align-items:center">
+        <div style="display:flex;align-items:center;gap:.35rem">
+          ${logo?`<img src="${logo}" style="width:18px;height:18px;object-fit:contain;background:#fff;border-radius:3px;padding:1px" onerror="this.style.display='none'">`:``}
+          <span style="color:var(--w);font-weight:500">${r.name}</span>
+        </div>
+        <span style="color:${r.color};font-weight:700">${pct}% · ${n}/24 seats</span>
+      </div>
+      <div style="height:10px;background:rgba(255,255,255,.05);border-radius:5px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${r.color};border-radius:5px;transition:width 1.2s ease"></div>
+      </div>
+    </div>`;}).join('');
+
+  // Walk-in split (simulated)
+  const totalWalkins=Math.round(bks.length*.18);
+  document.getElementById('walkSplit').innerHTML=`
+    <div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.9rem">
+      <div style="text-align:center"><div style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--green)">${Math.round(bks.length*.82)}</div><div style="font-size:.7rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em">Pre-booked</div></div>
+      <div style="text-align:center"><div style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--gold)">${totalWalkins}</div><div style="font-size:.7rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em">Walk-ins</div></div>
+      <div style="flex:1;min-width:120px">
+        <div style="height:12px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden;display:flex">
+          <div style="height:100%;width:82%;background:var(--green);border-radius:6px 0 0 6px"></div>
+          <div style="height:100%;width:18%;background:var(--gold);border-radius:0 6px 6px 0"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--mu);margin-top:.3rem"><span style="color:var(--green)">82% Pre-booked</span><span style="color:var(--gold)">18% Walk-in</span></div>
+      </div>
+    </div>`;
+}
+
+// ═══ RECEIPTS ═══
+async function loadReceipts(){
+  const bks=await getAllBk();const q=(document.getElementById('rcSearch')?.value||'').toUpperCase();
+  const filtered=q?bks.filter(b=>b.id.includes(q)||b.mpesaRef?.toUpperCase().includes(q)||b.name?.toUpperCase().includes(q)):bks;
+  document.getElementById('rcTbody').innerHTML=filtered.length?filtered.slice().reverse().map(b=>{
+    const r=ROUTES.find(x=>x.id===b.routeId)||{};
+    return`<tr>
+      <td><span style="font-family:monospace;font-size:.74rem;color:var(--mu)">${b.id}</span></td>
+      <td><strong>${b.name}</strong></td>
+      <td><span class="chip cgold">Seat ${b.seat}</span></td>
+      <td><span style="color:${r.color||'var(--green)'}">● ${r.name||'—'}</span></td>
+      <td><strong style="color:var(--green)">KSH ${b.amount}</strong></td>
+      <td><span style="font-family:monospace;font-size:.74rem;color:var(--mu)">${b.mpesaRef||'—'}</span></td>
+      <td><span class="chip ${b.status==='confirmed'?'cg':'cr'}">${b.status==='confirmed'?'✓ Paid':'Unconfirmed'}</span></td>
+      <td><span class="chip ${b.status==='confirmed'?'cg':'cr'}">${b.status==='confirmed'?'✓ Valid':'Invalid'}</span></td>
+      <td><span class="chip ${b.boarded?'cg':'cdim'}">${b.boarded?'✓ Boarded':'Awaiting'}</span></td>
+      <td style="font-size:.76rem;color:var(--mu)">${b.date}</td>
+    </tr>`;}).join(''):`<tr><td colspan="10" style="text-align:center;padding:2.5rem;color:var(--mu)">No receipts found</td></tr>`;
+}
+
+// ═══ FEEDBACK ═══
+async function loadFeedback(){
+  const fb=await getFeedback();
+  const avg=fb.length?fb.reduce((s,f)=>s+f.rating,0)/fb.length:0;
+  const flagged=fb.filter(f=>f.rating<=2);
+  document.getElementById('fbKpis').innerHTML=[
+    {cls:'kgold',n:avg?avg.toFixed(1):'—',l:'Average Rating',sub:`From ${fb.length} reviews`},
+    {cls:'kg',n:fb.filter(f=>f.rating>=4).length,l:'Positive Reviews',sub:'4-5 stars'},
+    {cls:'kred',n:flagged.length,l:'Flagged Reviews',sub:'Below 3 stars'},
+  ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-n">${k.n}</div><div class="kpi-l">${k.l}</div><div class="kpi-sub" style="color:var(--mu)">${k.sub}</div></div>`).join('');
+
+  document.getElementById('fbList').innerHTML=fb.length?fb.slice().reverse().slice(0,20).map(f=>`
+    <div class="fb-item" style="${f.rating<=2?'border-color:rgba(240,68,56,.3)':''}">
+      <div class="fb-top">
+        <div>
+          <span style="color:#f59e0b">${'⭐'.repeat(f.rating)}${'☆'.repeat(5-f.rating)}</span>
+          <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;margin-left:.4rem;color:${f.rating>=4?'var(--green)':f.rating>=3?'var(--gold)':'var(--red)'}">${f.rating}/5</span>
+        </div>
+        ${f.rating<=2?`<span class="chip cr">⚠ Flagged</span>`:''}
+      </div>
+      ${f.comment?`<div style="font-size:.81rem;color:var(--w);margin:.4rem 0">"${f.comment}"</div>`:''}
+      <div style="font-size:.71rem;color:var(--mu)">${f.name} · ${f.bookingId||'—'} · ${new Date(f.ts).toLocaleDateString('en-KE')}</div>
+    </div>`).join(''):`<div style="text-align:center;padding:2.5rem;color:var(--mu)">No feedback yet — passengers can rate via the Passenger App</div>`;
+
+  // Rating distribution
+  const dist=[5,4,3,2,1].map(s=>fb.filter(f=>f.rating===s).length);const mx=Math.max(...dist,1);
+  document.getElementById('ratingDist').innerHTML=`<div class="card-t"><em>Rating</em> Distribution</div>`+[5,4,3,2,1].map((s,i)=>`<div class="bar-row">
+    <span class="bar-lbl" style="min-width:40px;text-align:right">${s} ⭐</span>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.round(dist[i]/mx*100)}%;background:${s>=4?'var(--green)':s===3?'var(--gold)':'var(--red)'}"></div></div>
+    <span class="bar-val" style="min-width:30px;color:var(--mu)">${dist[i]}</span>
+  </div>`).join('');
+
+  document.getElementById('fbAlerts').innerHTML=flagged.length?flagged.slice(0,5).map(f=>`
+    <div style="background:rgba(240,68,56,.05);border:1px solid rgba(240,68,56,.2);border-radius:8px;padding:.75rem;margin-bottom:.5rem">
+      <div style="font-size:.8rem;color:var(--red);font-weight:600;margin-bottom:.2rem">⚠ ${f.rating}/5 — ${f.name}</div>
+      <div style="font-size:.76rem;color:var(--mu)">${f.comment||'No comment'}</div>
+    </div>`).join(''):`<div style="color:var(--green);font-size:.82rem;padding:.5rem">✓ No critical alerts — service performing well</div>`;
+}
+
+// ═══ DRIVERS ═══
+async function loadDrivers(){
+  const fb=await getFeedback();const avg=fb.length?fb.reduce((s,f)=>s+f.rating,0)/fb.length:4.2;
+  document.getElementById('driverRoster').innerHTML=ROUTES.map(r=>{
+    const dRating=(avg+Math.random()*.5-.25).toFixed(1);const flagged=parseFloat(dRating)<3.5;
+    return`<tr>
+      <td><strong>${r.driver}</strong><div style="font-size:.7rem;color:var(--mu)">Backup: ${r.backup}</div></td>
+      <td><span style="color:${r.color};font-weight:700">${r.van}</span></td>
+      <td style="font-size:.76rem;color:var(--mu)">${r.name}</td>
+      <td><span class="chip cb">${r.departs}</span></td>
+      <td><span class="chip ${LIVE.find(v=>v.id===r.id)?.status==='moving'?'cg':'cdim'}">${LIVE.find(v=>v.id===r.id)?.status||'—'}</span></td>
+      <td><span style="color:${flagged?'var(--red)':parseFloat(dRating)>=4?'var(--green)':'var(--gold)';font-weight:700}">${dRating} ⭐</span>${flagged?'<span class="chip cr" style="margin-left:.3rem">⚠ Flagged</span>':''}</td>
+    </tr>`;}).join('');
+}
+
+// TOAST
+let tt;function toast(m,t=''){const e=document.getElementById('toast');e.textContent=m;e.className='toast show'+(t?' '+t:'');clearTimeout(tt);tt=setTimeout(()=>e.className='toast',3500);}
+
+// Check if already logged in (session)
+window.addEventListener('DOMContentLoaded',()=>{
+  if(sessionStorage.getItem('catatu_admin')){
+    admin={name:sessionStorage.getItem('catatu_admin')};
+    document.getElementById('loginW').style.display='none';
+    document.getElementById('app').style.display='grid';
+    document.getElementById('aTbName').textContent=admin.name;
+    boot();
+  }
+});
+const _aLogin=aLogin;
+function aLogin(){_aLogin();if(admin)sessionStorage.setItem('catatu_admin',admin.name);}
+</script>
+</body>
+</html>

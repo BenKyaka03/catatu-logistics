@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06090e">
+<title>CATATU — Driver Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#06090e;--card:#0c1220;--c2:#101828;--green:#00e87a;--gold:#d4a843;--white:#edf0f8;--muted:#4a5e7a;--border:rgba(100,160,255,.1);--border2:rgba(100,160,255,.2);--red:#f04438;--blue:#3b82f6;--r:14px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden}
+.app{display:none;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto}
+.app.ready{display:flex}
+.topbar{flex-shrink:0;height:58px;background:rgba(6,9,14,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.1rem}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.06em}.brand span{color:var(--green)}
+.screens{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.screens::-webkit-scrollbar{display:none}
+.screen{display:none;padding:1rem 1rem 1.5rem;min-height:100%}
+.screen.active{display:block;animation:su .22s ease}
+@keyframes su{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.bnav{flex-shrink:0;background:rgba(6,9,14,.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom)}
+.bn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:.72rem .2rem;border:none;background:none;color:var(--muted);font-family:inherit;cursor:pointer;transition:color .2s}
+.bn.active{color:var(--green)}.bn-ico{font-size:1.2rem}.bn-lbl{font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.sl{font-size:.66rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.85rem}
+.cbody{padding:1.1rem}
+.ct{font-weight:700;font-size:.9rem;margin-bottom:.8rem;color:var(--green)}
+.btn{display:flex;align-items:center;justify-content:center;gap:.4rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:.78rem;letter-spacing:.07em;text-transform:uppercase;border-radius:11px;padding:.88rem 1.3rem;cursor:pointer;border:none;transition:all .2s;min-height:50px;width:100%}
+.btn-g{background:var(--green);color:#06090e}.btn-g:hover{filter:brightness(1.08)}
+.btn-o{background:transparent;color:var(--white);border:1.5px solid var(--border)}.btn-o:hover{border-color:var(--green);color:var(--green)}
+.btn-red{background:var(--red);color:#fff}
+.btn-gold{background:rgba(212,168,67,.15);color:var(--gold);border:1px solid rgba(212,168,67,.25)}
+.btn-sm{padding:.52rem 1rem;font-size:.7rem;min-height:38px;width:auto;border-radius:9px}
+.fld{margin-bottom:.85rem}
+.fld label{display:block;font-size:.64rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:.38rem}
+.fld input,.fld select{width:100%;background:rgba(100,160,255,.04);border:1px solid rgba(100,160,255,.12);border-radius:10px;color:var(--white);font-family:inherit;font-size:.9rem;padding:.78rem 1rem;outline:none;min-height:48px;appearance:none;transition:border-color .2s}
+.fld input:focus,.fld select:focus{border-color:var(--blue)}
+select option{background:var(--card)}
+.chip{display:inline-flex;align-items:center;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .5rem;border-radius:20px}
+.cg{background:rgba(0,232,122,.1);color:var(--green);border:1px solid rgba(0,232,122,.2)}
+.cr{background:rgba(240,68,56,.1);color:var(--red);border:1px solid rgba(240,68,56,.2)}
+.cgold{background:rgba(212,168,67,.1);color:var(--gold);border:1px solid rgba(212,168,67,.2)}
+.cb{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.cdim{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.06)}
+.div{height:1px;background:var(--border);margin:.8rem 0}
+/* stat grid */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.85rem}
+.sb{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem;text-align:center}
+.sn{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;line-height:1;color:var(--green)}
+.sl2{font-size:.62rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-top:.15rem}
+/* manifest */
+.pax-row{background:var(--c2);border:1px solid var(--border);border-radius:11px;padding:.9rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.8rem;cursor:pointer;transition:all .2s}
+.pax-row:hover{border-color:rgba(100,160,255,.25)}
+.pax-row.boarded{border-color:rgba(0,232,122,.3);background:rgba(0,232,122,.04)}
+.p-seat{width:38px;height:38px;border-radius:8px;background:rgba(100,160,255,.08);border:1px solid rgba(100,160,255,.2);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#60a5fa;flex-shrink:0}
+.pax-row.boarded .p-seat{background:rgba(0,232,122,.1);border-color:rgba(0,232,122,.25);color:var(--green)}
+.p-info{flex:1;min-width:0}
+.p-name{font-size:.85rem;font-weight:700}
+.p-det{font-size:.71rem;color:var(--muted);margin-top:.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-ref{font-family:monospace;font-size:.68rem;color:var(--muted)}
+/* stop progress */
+.stop-prog{display:flex;overflow-x:auto;padding:.4rem 0;gap:0;scrollbar-width:none;margin:.7rem 0}
+.stop-prog::-webkit-scrollbar{display:none}
+.sp-item{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;min-width:68px;position:relative}
+.sp-item:not(:last-child)::after{content:'';position:absolute;top:13px;left:calc(50% + 14px);right:calc(-50% + 14px);height:2px;background:var(--border)}
+.sp-item.passed::after{background:var(--green)}
+.sp-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;color:var(--muted);z-index:1;position:relative;transition:all .25s}
+.sp-item.passed .sp-dot{background:var(--green);border-color:var(--green);color:#06090e}
+.sp-item.current .sp-dot{border-color:var(--green);color:var(--green);animation:spGlow 1.5s ease infinite}
+@keyframes spGlow{0%,100%{box-shadow:0 0 0 4px rgba(0,232,122,.15)}50%{box-shadow:0 0 0 8px rgba(0,232,122,.05)}}
+.sp-name{font-size:.57rem;color:var(--muted);text-align:center;margin-top:.3rem;line-height:1.25;max-width:66px;word-break:break-word;font-weight:600}
+.sp-item.current .sp-name{color:var(--green)}
+/* map */
+#driverMap{height:255px;border-radius:var(--r);margin-bottom:.85rem}
+.leaflet-container{background:#040608!important}
+.leaflet-tile{filter:brightness(.6) saturate(.65) hue-rotate(210deg)}
+.leaflet-popup-content-wrapper{background:rgba(6,9,14,.97)!important;border:1px solid rgba(100,160,255,.25)!important;border-radius:10px!important;color:var(--white)!important;font-family:'Plus Jakarta Sans',sans-serif!important;font-size:.8rem!important}
+.leaflet-popup-tip{background:rgba(6,9,14,.97)!important}
+/* earnings */
+.earn-row{display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.earn-row:last-child{border:none;padding-top:.65rem}
+.ek{color:var(--muted);font-weight:500}.ev{font-weight:700}
+.ev-g{color:var(--green)}.ev-gold{color:var(--gold)}.ev-r{color:var(--red)}
+/* gauge */
+.gauge-wrap{position:relative;width:100px;height:100px}
+.gauge-svg{transform:rotate(-90deg)}
+.gauge-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge-n{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--green);line-height:1}
+.gauge-l{font-size:.6rem;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}
+/* bar chart */
+.bar-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.55rem}
+.bar-lbl{font-size:.68rem;color:var(--muted);width:28px;text-align:right;flex-shrink:0;font-weight:600}
+.bar-track{flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:var(--green);transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+.bar-val{font-family:'Bebas Neue',sans-serif;font-size:.85rem;color:var(--green);width:60px;text-align:right;flex-shrink:0}
+/* feedback */
+.fb-item{background:var(--c2);border:1px solid var(--border);border-radius:11px;padding:.9rem;margin-bottom:.65rem}
+.fb-stars{color:#f59e0b;font-size:.9rem;margin-bottom:.3rem}
+.fb-cmt{font-size:.8rem;color:var(--white);margin-bottom:.3rem;line-height:1.5}
+.fb-meta{font-size:.7rem;color:var(--muted)}
+/* verify */
+.verify-result{margin-top:.85rem}
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(5px)}
+.modal-overlay.open{display:flex}
+.modal{background:#0c1220;border-radius:20px 20px 0 0;border-top:1px solid var(--border);border-left:1px solid var(--border);border-right:1px solid var(--border);width:100%;max-width:430px;padding:1.5rem;max-height:90dvh;overflow-y:auto;animation:mu .3s cubic-bezier(.22,1,.36,1)}
+@keyframes mu{from{transform:translateY(100%)}to{transform:none}}
+.modal-handle{width:40px;height:4px;background:rgba(100,160,255,.2);border-radius:2px;margin:0 auto 1.3rem}
+/* toast */
+.toast{position:fixed;top:66px;left:50%;transform:translateX(-50%) translateY(-14px);background:rgba(12,18,32,.97);border:1px solid var(--border);color:var(--white);padding:.65rem 1.3rem;border-radius:11px;font-size:.8rem;font-weight:600;z-index:999;opacity:0;transition:all .28s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:rgba(240,68,56,.4);color:var(--red)}
+/* login */
+#loginScreen{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;background:radial-gradient(ellipse at 50% 10%,rgba(59,130,246,.07),transparent 50%),var(--bg)}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.8rem;width:100%;max-width:360px;margin-top:1.4rem}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:.08em;text-align:center">CATA<span style="color:var(--green)">TU</span></div>
+  <div style="font-size:.8rem;color:var(--muted);margin:.15rem 0 .5rem;text-align:center">🚐 Driver &amp; Conductor Portal</div>
+  <div class="login-card">
+    <div class="fld"><label>Driver Full Name</label><input id="dn" type="text" placeholder="James Kamau" autocomplete="name"></div>
+    <div class="fld"><label>Employee ID / Phone</label><input id="di" type="text" placeholder="0712 345 678"></div>
+    <div class="fld"><label>Your Assigned Vehicle &amp; Route</label>
+      <select id="dv">
+        <option value="">Select your vehicle…</option>
+        <option value="CV-001|R1">CV-001 · KCB 123A → Zone A Express (Donholm → Strathmore)</option>
+        <option value="CV-002|R2">CV-002 · KCB 456B → Zone B Academic (Kilimani → UoN)</option>
+        <option value="CV-003|R3">CV-003 · KCB 789C → Zone E Long Haul (TRM → Daystar)</option>
+        <option value="CV-004|R4">CV-004 · KCB 321D → Zone C Connect (Ruaka → Riara)</option>
+        <option value="CV-005|R5">CV-005 · KCB 654E → Zone D Karen (Karen → Strathmore)</option>
+      </select>
+    </div>
+    <button class="btn btn-g" onclick="dLogin()" style="margin-bottom:.85rem">Start My Shift →</button>
+    <div style="text-align:center;font-size:.72rem;color:var(--muted)">Passenger? <a href="passenger.html" style="color:var(--green)">Passenger App</a> &nbsp;·&nbsp; <a href="admin.html" style="color:var(--gold)">Admin Panel</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div>
+      <div class="brand">CATA<span>TU</span> <span style="font-size:.78rem;color:var(--muted);font-family:'Plus Jakarta Sans',sans-serif;font-weight:500">Driver</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:.65rem">
+      <div style="font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:.22rem .6rem;border-radius:20px;transition:all .3s" id="shiftPill" class="cdim">OFF SHIFT</div>
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem;color:#fff" id="dAv">D</div>
+    </div>
+  </div>
+
+  <div class="screens" id="screens">
+
+    <!-- TRIP -->
+    <div class="screen active" id="s-trip">
+      <div id="tripCtrl"></div>
+      <div id="tripSummaryArea"></div>
+    </div>
+
+    <!-- MANIFEST -->
+    <div class="screen" id="s-manifest">
+      <div id="manifestHeader" class="card cbody" style="margin-bottom:.8rem"></div>
+      <div style="display:flex;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap">
+        <button class="btn btn-sm btn-o" id="mf-all" onclick="filterManifest('all')">All</button>
+        <button class="btn btn-sm btn-o" id="mf-pending" onclick="filterManifest('pending')">Pending</button>
+        <button class="btn btn-sm btn-o" id="mf-boarded" onclick="filterManifest('boarded')">Boarded ✓</button>
+        <button class="btn btn-sm btn-gold" onclick="printManifest()" style="margin-left:auto">🖨 Print</button>
+      </div>
+      <div id="manifList"></div>
+    </div>
+
+    <!-- MAP -->
+    <div class="screen" id="s-map">
+      <span class="sl">Live Route Map</span>
+      <div id="driverMap"></div>
+      <div class="card cbody">
+        <div class="ct">Stop Progress</div>
+        <div class="stop-prog" id="stopProg"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.6rem">
+          <button class="btn btn-g" onclick="advanceStop()">✓ Next Stop →</button>
+          <button class="btn btn-o" onclick="refreshMap()">🔄 Refresh Map</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EARNINGS -->
+    <div class="screen" id="s-earnings">
+      <div class="sg">
+        <div class="sb"><div class="sn" id="eTrips">0</div><div class="sl2">Trips Today</div></div>
+        <div class="sb"><div class="sn" id="ePax">0</div><div class="sl2">Passengers</div></div>
+        <div class="sb" style="grid-column:1/-1"><div class="sn" style="font-size:2.4rem" id="eRev">KSH 0</div><div class="sl2">Revenue Today</div></div>
+      </div>
+      <div class="card cbody">
+        <div class="ct">Financial Breakdown</div>
+        <div id="earnBreak"></div>
+        <div class="div"></div>
+        <div class="earn-row"><span class="ek">Gross Revenue</span><span class="ev ev-g" id="eGross">KSH 0</span></div>
+        <div class="earn-row"><span class="ek">Driver Share (70%)</span><span class="ev ev-g" id="eDrvr">KSH 0</span></div>
+        <div class="earn-row"><span class="ek">CATATU Company (30%)</span><span class="ev ev-gold" id="eCo">KSH 0</span></div>
+        <div class="earn-row"><span class="ek" style="font-weight:800;color:var(--white)">Your Net Earnings</span><span class="ev ev-g" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem" id="eNet">KSH 0</span></div>
+      </div>
+      <div class="card cbody">
+        <div class="ct">Occupancy Rate</div>
+        <div style="display:flex;align-items:center;gap:1.3rem">
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" width="100" height="100" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(0,232,122,.07)" stroke-width="10"/>
+              <circle id="gaugeArc" cx="50" cy="50" r="40" fill="none" stroke="#00e87a" stroke-width="10" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" style="transition:stroke-dashoffset 1.3s ease"/>
+            </svg>
+            <div class="gauge-txt"><div class="gauge-n" id="gaugePct">0%</div><div class="gauge-l">Full</div></div>
+          </div>
+          <div style="flex:1">
+            <div style="margin-bottom:.6rem"><div style="font-size:.7rem;color:var(--muted)">Booked Seats</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem" id="occBooked">0/24</div></div>
+            <div><div style="font-size:.7rem;color:var(--muted)">Walk-in Additions</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--gold)" id="occWalkin">0</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card cbody">
+        <div class="ct">7-Day Revenue</div>
+        <div id="revChart"></div>
+      </div>
+    </div>
+
+    <!-- FEEDBACK -->
+    <div class="screen" id="s-feedback">
+      <div class="card cbody" style="text-align:center;margin-bottom:.85rem">
+        <div class="ct" style="text-align:center">My Performance Rating</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:3.8rem;color:var(--gold);line-height:1;margin-bottom:.25rem" id="myRating">—</div>
+        <div style="color:#f59e0b;font-size:1.3rem;margin-bottom:.3rem" id="myStars">—</div>
+        <div style="font-size:.78rem;color:var(--muted)" id="ratingCount">No ratings yet</div>
+      </div>
+      <span class="sl">Passenger Reviews</span>
+      <div id="fbList"></div>
+    </div>
+
+    <!-- VERIFY -->
+    <div class="screen" id="s-verify">
+      <span class="sl">Verify Boarding Pass</span>
+      <div class="card cbody">
+        <div class="ct">Lookup Booking</div>
+        <div style="background:rgba(212,168,67,.05);border:1px solid rgba(212,168,67,.2);border-radius:9px;padding:.8rem;font-size:.75rem;color:var(--gold);margin-bottom:.85rem;line-height:1.65">
+          ⚠️ <strong>Priority:</strong> Pre-booked passengers board first. Walk-ins may board only after all booked seats are verified.
+        </div>
+        <div class="fld"><label>Booking Ref or M-Pesa Code</label>
+          <input id="vRef" type="text" placeholder="e.g. CAT1A2B3C or QGH7KL2PXY" style="text-transform:uppercase;font-family:monospace" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <button class="btn btn-g" onclick="doVerify()">🔍 Verify Passenger</button>
+      </div>
+      <div class="verify-result" id="vResult"></div>
+    </div>
+
+  </div>
+
+  <div class="bnav">
+    <button class="bn active" id="bn-trip" onclick="navTo('trip')"><div class="bn-ico">🚐</div><div class="bn-lbl">Trip</div></button>
+    <button class="bn" id="bn-manifest" onclick="navTo('manifest')"><div class="bn-ico">📋</div><div class="bn-lbl">Manifest</div></button>
+    <button class="bn" id="bn-map" onclick="navTo('map')"><div class="bn-ico">📍</div><div class="bn-lbl">Map</div></button>
+    <button class="bn" id="bn-earnings" onclick="navTo('earnings')"><div class="bn-ico">💰</div><div class="bn-lbl">Earnings</div></button>
+    <button class="bn" id="bn-feedback" onclick="navTo('feedback')"><div class="bn-ico">⭐</div><div class="bn-lbl">Reviews</div></button>
+  </div>
+</div>
+
+<!-- PAX DETAIL MODAL -->
+<div class="modal-overlay" id="paxModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="paxModalContent"></div>
+    <button class="btn btn-o" onclick="document.getElementById('paxModal').classList.remove('open')" style="margin-top:.85rem">Close</button>
+  </div>
+</div>
+
+<script>
+const ROUTES=[
+  {id:'R1',name:'Zone A Express',from:'Donholm / Taj Mall',to:'Strathmore University',stops:['Taj Mall','Greenspan Mall','Nyayo Estate','Donholm Stage','Upperhill','Strathmore Univ.'],departs:'6:30 AM',fare:200,color:'#3b82f6'},
+  {id:'R2',name:'Zone B Academic',from:'Kilimani / Lavington',to:'University of Nairobi',stops:['Hurlingham','Kilimani Rd','Valley Arcade','Lavington','UoN'],departs:'6:45 AM',fare:300,color:'#22c55e'},
+  {id:'R3',name:'Zone E Long Haul',from:'TRM / Roysambu',to:'Daystar University',stops:['TRM Mall','Roysambu','Garden City','Syokimau','Daystar'],departs:'6:00 AM',fare:450,color:'#a855f7'},
+  {id:'R4',name:'Zone C Connect',from:'Ruaka / Two Rivers',to:'Riara University',stops:['Two Rivers','Ruaka Rd','Muthaiga','Westlands','Riara Univ.'],departs:'6:30 AM',fare:350,color:'#f97316'},
+  {id:'R5',name:'Zone D Karen',from:'Karen / Rongai',to:'Strathmore University',stops:['Rongai Stage','Hardy','Karen Shopping','Langata Rd','Strathmore'],departs:'5:50 AM',fare:400,color:'#ef4444'},
+];
+const VAN_ROUTE={'CV-001':'R1','CV-002':'R2','CV-003':'R3','CV-004':'R4','CV-005':'R5'};
+
+let driver=null,activeTrip=null,tripPax=[],curStop=0,mFilter='all',dMap=null,dBusMk=null,trackInt=null;
+let busPos={lat:-1.310,lng:36.878};
+
+async function dbG(k){try{if(window.storage){const r=await window.storage.get('ct_'+k);return r?JSON.parse(r.value):null;}return JSON.parse(localStorage.getItem('ct_'+k)||'null');}catch{return null;}}
+async function dbS(k,v){try{const s=JSON.stringify(v);if(window.storage)await window.storage.set('ct_'+k,s);else localStorage.setItem('ct_'+k,s);}catch{}}
+async function getAllBk(){return(await dbG('bookings'))||[];}
+async function saveBk(b){const a=await getAllBk();const i=a.findIndex(x=>x.id===b.id);if(i>=0)a[i]=b;else a.push(b);await dbS('bookings',a);}
+async function getTrips(){return(await dbG('trips'))||[];}
+async function saveTrip(t){const a=await getTrips();const i=a.findIndex(x=>x.id===t.id);if(i>=0)a[i]=t;else a.push(t);await dbS('trips',a);}
+
+async function dLogin(){
+  const n=document.getElementById('dn').value.trim(),id=document.getElementById('di').value.trim(),vs=document.getElementById('dv').value;
+  if(!n||!id||!vs){toast('Please fill all fields','error');return;}
+  const[van,rid]=vs.split('|');
+  driver={name:n,id,van,routeId:rid,av:n[0].toUpperCase()};
+  await dbS('drv_user',driver);boot();
+}
+async function checkAuth(){const d=await dbG('drv_user');if(d){driver=d;boot();}else document.getElementById('loginScreen').style.display='flex';}
+
+function boot(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').classList.add('ready');
+  document.getElementById('dAv').textContent=driver.av;
+  renderTripCtrl();loadEarnings();loadFeedback();
+}
+
+function navTo(s){
+  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.bn').forEach(x=>x.classList.remove('active'));
+  document.getElementById('s-'+s).classList.add('active');
+  const b=document.getElementById('bn-'+s);if(b)b.classList.add('active');
+  document.getElementById('screens').scrollTo({top:0,behavior:'instant'});
+  if(s==='manifest')loadManifest();
+  if(s==='map')initMap();
+  if(s==='earnings')loadEarnings();
+  if(s==='feedback')loadFeedback();
+  if(s==='verify'){document.getElementById('vResult').innerHTML='';document.getElementById('vRef').value='';}
+}
+
+async function renderTripCtrl(){
+  const route=ROUTES.find(r=>r.id===driver.routeId)||{stops:[]};
+  const el=document.getElementById('tripCtrl');
+  const pill=document.getElementById('shiftPill');
+  if(activeTrip){
+    pill.style.cssText='background:rgba(0,232,122,.1);color:var(--green);border:1px solid rgba(0,232,122,.25)';pill.textContent='ON TRIP';
+    const bd=tripPax.filter(p=>p.boarded).length;
+    const rv=tripPax.filter(p=>p.boarded).reduce((s,b)=>s+(b.amount||0),0);
+    el.innerHTML=`
+      <div style="background:linear-gradient(135deg,rgba(0,232,122,.07),rgba(0,232,122,.02));border:1px solid rgba(0,232,122,.22);border-radius:var(--r);padding:1.3rem;margin-bottom:.85rem">
+        <div style="font-size:.64rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--green);margin-bottom:.3rem">Active Trip</div>
+        <div style="font-weight:800;font-size:1rem;margin-bottom:.15rem">${route.name}</div>
+        <div style="font-size:.73rem;color:var(--muted);margin-bottom:.9rem">${driver.van} · Started ${activeTrip.startTime}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;text-align:center;background:rgba(0,0,0,.2);border-radius:10px;padding:.7rem;margin-bottom:.85rem">
+          <div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:var(--green)" id="lPax">${bd}</div><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">On Board</div></div>
+          <div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:var(--gold)" id="lRev">${rv.toLocaleString()}</div><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">KSH Earned</div></div>
+          <div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem" id="lStop">${curStop+1}/${route.stops.length}</div><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Stop</div></div>
+        </div>
+        <div style="background:rgba(0,232,122,.06);border:1px solid rgba(0,232,122,.15);border-radius:9px;padding:.65rem;margin-bottom:.85rem;font-size:.8rem">
+          📍 Current stop: <strong style="color:var(--green)">${route.stops[curStop]||'—'}</strong>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.65rem">
+          <button class="btn btn-o btn-sm" onclick="navTo('manifest')">📋 Manifest</button>
+          <button class="btn btn-o btn-sm" onclick="navTo('verify')">🔍 Verify Pax</button>
+        </div>
+        <button class="btn btn-red" onclick="endTrip()">■ End Trip &amp; Close Manifest</button>
+      </div>`;
+  } else {
+    pill.style.cssText='background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.06)';pill.textContent='OFF SHIFT';
+    el.innerHTML=`
+      <div style="background:linear-gradient(135deg,rgba(59,130,246,.07),rgba(59,130,246,.01));border:1px solid rgba(59,130,246,.18);border-radius:var(--r);padding:1.4rem;margin-bottom:.85rem;position:relative;overflow:hidden">
+        <div style="position:absolute;right:.8rem;top:-.3rem;font-size:5.5rem;opacity:.06;pointer-events:none">🚐</div>
+        <div style="font-size:.64rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#60a5fa;margin-bottom:.3rem">Driver Portal</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.04em;line-height:1.1;margin-bottom:.2rem">GOOD MORNING,<br><span style="color:var(--green)">${driver.name.split(' ')[0].toUpperCase()}</span></div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.3rem">${driver.van} · ${route.name}</div>
+      </div>
+      <div class="card cbody">
+        <div class="ct">Register Your Trip</div>
+        <div style="background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:9px;padding:.8rem;font-size:.74rem;color:var(--gold);margin-bottom:.85rem;line-height:1.65">
+          ⚠️ <strong>Priority Rule:</strong> Pre-booked passengers ALWAYS board first. Walk-ins fill remaining seats only after all bookings are seated.
+        </div>
+        <div class="fld"><label>Trip Date</label><input type="date" id="tripDate" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div class="fld"><label>Departure Time</label><input type="time" id="tripTime" value="${new Date().toTimeString().slice(0,5)}"></div>
+        <div class="fld"><label>Walk-in Passengers (no booking)</label><input type="number" id="walkins" placeholder="0" min="0" max="24" value="0" inputmode="numeric"></div>
+        <button class="btn btn-g" onclick="startTrip()">🚀 Start Trip &amp; Open Manifest</button>
+      </div>`;
+  }
+  renderTodaySummary();
+}
+
+async function startTrip(){
+  const route=ROUTES.find(r=>r.id===driver.routeId)||{stops:[]};
+  const date=document.getElementById('tripDate').value,time=document.getElementById('tripTime').value;
+  if(!date||!time){toast('Set date and time','error');return;}
+  const allBk=await getAllBk();
+  tripPax=allBk.filter(b=>b.routeId===driver.routeId&&b.date===date&&b.status!=='cancelled');
+  curStop=0;
+  activeTrip={id:'TR'+Date.now().toString(36).toUpperCase(),vehicleId:driver.van,driverId:driver.id,driverName:driver.name,routeId:driver.routeId,date,startTime:time,status:'active',walkins:parseInt(document.getElementById('walkins').value)||0,revenue:0,paxCount:tripPax.length,stops:[]};
+  await saveTrip(activeTrip);
+  busPos={lat:ROUTES.find(r=>r.id===driver.routeId)?.lat||-1.310,lng:ROUTES.find(r=>r.id===driver.routeId)?.lng||36.878};
+  await dbS('bus_pos_'+driver.van,{lat:busPos.lat,lng:busPos.lng,stop:curStop,spd:0,pax:tripPax.length,routeId:driver.routeId,ts:Date.now()});
+  startGPS();
+  toast(`Trip started! ${tripPax.length} bookings loaded 📋`);
+  renderTripCtrl();
+}
+
+async function endTrip(){
+  if(!activeTrip)return;
+  if(trackInt)clearInterval(trackInt);
+  activeTrip.status='completed';activeTrip.endTime=new Date().toTimeString().slice(0,5);
+  activeTrip.revenue=tripPax.filter(p=>p.boarded).reduce((s,b)=>s+(b.amount||0),0);
+  await saveTrip(activeTrip);await dbS('bus_pos_'+driver.van,null);
+  activeTrip=null;curStop=0;tripPax=[];
+  toast('Trip completed ✓');await loadEarnings();renderTripCtrl();
+}
+
+async function renderTodaySummary(){
+  const trips=await getTrips(),today=new Date().toISOString().split('T')[0];
+  const myT=trips.filter(t=>t.driverId===driver.id&&t.date===today&&t.status==='completed');
+  document.getElementById('tripSummaryArea').innerHTML=`
+    <div class="sg">
+      <div class="sb"><div class="sn" style="font-size:1.6rem">${myT.length}</div><div class="sl2">Trips Today</div></div>
+      <div class="sb"><div class="sn" style="font-size:1.6rem">${myT.reduce((s,t)=>s+(t.paxCount||0),0)}</div><div class="sl2">Total Pax</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+      <button class="btn btn-o btn-sm" onclick="navTo('manifest')">📋 Manifest</button>
+      <button class="btn btn-o btn-sm" onclick="navTo('map')">📍 Map</button>
+      <button class="btn btn-o btn-sm" onclick="navTo('verify')">🔍 Verify</button>
+    </div>`;
+}
+
+function startGPS(){
+  if(trackInt)clearInterval(trackInt);
+  trackInt=setInterval(async()=>{
+    busPos.lat+=(Math.random()-.5)*.0012;busPos.lng+=(Math.random()-.5)*.0012;
+    await dbS('bus_pos_'+driver.van,{lat:busPos.lat,lng:busPos.lng,stop:curStop,spd:Math.round(30+Math.random()*35),pax:tripPax.filter(p=>p.boarded).length,routeId:driver.routeId,ts:Date.now()});
+    if(dBusMk)dBusMk.setLatLng([busPos.lat,busPos.lng]);
+    const lp=document.getElementById('lPax'),lr=document.getElementById('lRev');
+    if(lp)lp.textContent=tripPax.filter(p=>p.boarded).length;
+    if(lr)lr.textContent=tripPax.filter(p=>p.boarded).reduce((s,b)=>s+(b.amount||0),0).toLocaleString();
+  },8000);
+}
+
+async function advanceStop(){
+  const route=ROUTES.find(r=>r.id===driver.routeId)||{stops:[]};
+  if(curStop<route.stops.length-1){
+    curStop++;
+    busPos.lat+=(Math.random()-.5)*.006;busPos.lng-=.004+(Math.random()*.002);
+    if(dBusMk)dBusMk.setLatLng([busPos.lat,busPos.lng]);
+    if(activeTrip){activeTrip.stops.push({stop:route.stops[curStop],time:new Date().toTimeString().slice(0,5)});await saveTrip(activeTrip);}
+    await dbS('bus_pos_'+driver.van,{lat:busPos.lat,lng:busPos.lng,stop:curStop,spd:Math.round(35+Math.random()*25),pax:tripPax.filter(p=>p.boarded).length,routeId:driver.routeId,ts:Date.now()});
+    renderStopProg();
+    const ls=document.getElementById('lStop');if(ls)ls.textContent=`${curStop+1}/${route.stops.length}`;
+    toast(`✓ Stop ${curStop+1}: ${route.stops[curStop]}`);
+  } else toast('Last stop reached — end trip when ready');
+}
+
+async function loadManifest(){
+  const route=ROUTES.find(r=>r.id===driver.routeId)||{};
+  const date=document.getElementById('tripDate')?.value||new Date().toISOString().split('T')[0];
+  const allBk=await getAllBk();
+  tripPax=allBk.filter(b=>b.routeId===driver.routeId&&b.date===date&&b.status!=='cancelled');
+  const bd=tripPax.filter(p=>p.boarded).length;
+  document.getElementById('manifestHeader').innerHTML=`
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:.5rem">${route.name||'—'} · ${date}</div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+      <span class="chip cg">${tripPax.length} Booked</span>
+      <span class="chip cb">${bd} Boarded</span>
+      <span class="chip cdim">${tripPax.length-bd} Pending</span>
+      <span class="chip cgold">${24-tripPax.length} Walk-in Slots</span>
+    </div>`;
+  renderManifestList();
+}
+
+function filterManifest(f){
+  mFilter=f;
+  ['all','pending','boarded'].forEach(x=>{const b=document.getElementById('mf-'+x);if(b)b.className=`btn btn-sm ${x===f?'btn-g':'btn-o'}`;});
+  renderManifestList();
+}
+
+function renderManifestList(){
+  const filtered=mFilter==='all'?tripPax:mFilter==='boarded'?tripPax.filter(p=>p.boarded):tripPax.filter(p=>!p.boarded);
+  const el=document.getElementById('manifList');
+  if(!filtered.length){el.innerHTML=`<div style="text-align:center;padding:2.5rem;color:var(--muted)">No passengers in this filter</div>`;return;}
+  el.innerHTML=filtered.map(p=>`
+    <div class="pax-row ${p.boarded?'boarded':''}" onclick="showPaxDetail('${p.id}')">
+      <div class="p-seat">${p.seat}</div>
+      <div class="p-info">
+        <div class="p-name">${p.name}</div>
+        <div class="p-det">📍 ${p.boardingStop||'—'} · 📱 ${p.phone}</div>
+        <div class="p-ref">M-Pesa: ${p.mpesaRef}</div>
+      </div>
+      <div>${p.boarded?'<span class="chip cg">✓ On</span>':'<span class="chip cdim">Pending</span>'}</div>
+    </div>`).join('');
+}
+
+async function showPaxDetail(id){
+  const p=tripPax.find(x=>x.id===id)||{};const route=ROUTES.find(r=>r.id===p.routeId)||{};
+  document.getElementById('paxModalContent').innerHTML=`
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.05em;color:var(--green);margin-bottom:.85rem">Passenger Details</div>
+    <div style="background:rgba(100,160,255,.04);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.85rem">
+      ${[['Name',p.name],['Phone',p.phone],['Seat','Seat '+p.seat],['Boarding Stop',p.boardingStop],['Route',route.name||'—'],['M-Pesa Ref',p.mpesaRef],['Amount Paid','KSH '+p.amount],['Date',p.date],['Status',p.boarded?'✓ Boarded':'Not yet boarded']].map(([k,v])=>`
+        <div style="display:flex;justify-content:space-between;padding:.42rem 0;border-bottom:1px solid var(--border);font-size:.82rem">
+          <span style="color:var(--muted);font-weight:500">${k}</span>
+          <span style="font-weight:700;color:${k==='Status'?(p.boarded?'var(--green)':'var(--gold)'):'var(--white)'}">${v}</span>
+        </div>`).join('')}
+    </div>
+    ${!p.boarded?`<button class="btn btn-g" onclick="markBoarded('${id}')">✓ Allow to Board — Mark Boarded</button>`:
+    `<div style="text-align:center;padding:1rem;color:var(--green);font-weight:700">✓ Already boarded and verified</div>`}`;
+  document.getElementById('paxModal').classList.add('open');
+}
+
+async function markBoarded(id){
+  const i=tripPax.findIndex(p=>p.id===id);
+  if(i>=0){tripPax[i].boarded=true;await saveBk(tripPax[i]);
+  document.getElementById('paxModal').classList.remove('open');
+  renderManifestList();
+  const lp=document.getElementById('lPax');if(lp)lp.textContent=tripPax.filter(p=>p.boarded).length;
+  toast(`✓ ${tripPax[i].name} boarded`);}
+}
+
+function printManifest(){
+  const route=ROUTES.find(r=>r.id===driver.routeId)||{};
+  const w=window.open('','_blank','width=700,height=700');
+  w.document.write(`<!DOCTYPE html><html><head><title>CATATU Manifest</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>body{font-family:'Plus Jakarta Sans',sans-serif;padding:1.5rem;font-size:13px;color:#111}h1{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.06em;margin-bottom:.2rem}h1 em{color:#00e87a;font-style:normal}table{width:100%;border-collapse:collapse;margin-top:.8rem}th,td{border:1px solid #e5e7eb;padding:.45rem .65rem;text-align:left}th{background:#f9fafb;font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700}tr.boarded{background:#f0fdf4}@media print{body{padding:.5rem}}</style>
+  </head><body>
+  <h1>CATA<em>TU</em> PASSENGER MANIFEST</h1>
+  <p style="font-size:.82rem;color:#6b7280;margin-bottom:.3rem">Route: <strong>${route.name||'—'}</strong> &nbsp;·&nbsp; Date: <strong>${activeTrip?.date||new Date().toISOString().split('T')[0]}</strong> &nbsp;·&nbsp; Driver: <strong>${driver.name}</strong> &nbsp;·&nbsp; Van: <strong>${driver.van}</strong></p>
+  <p style="font-size:.78rem;color:#6b7280">${route.from||''} → ${route.to||''} &nbsp;·&nbsp; Departs ${route.departs||''}</p>
+  <table><thead><tr><th>#</th><th>Seat</th><th>Passenger Name</th><th>Phone</th><th>Boarding Stop</th><th>M-Pesa Ref</th><th>KSH</th><th>Boarded</th></tr></thead>
+  <tbody>${tripPax.map((p,i)=>`<tr class="${p.boarded?'boarded':''}"><td>${i+1}</td><td><strong>${p.seat}</strong></td><td>${p.name}</td><td>${p.phone}</td><td>${p.boardingStop||'—'}</td><td style="font-family:monospace">${p.mpesaRef}</td><td>${p.amount}</td><td style="text-align:center;font-size:1rem">${p.boarded?'✓':''}</td></tr>`).join('')}</tbody></table>
+  <p style="margin-top:.8rem;font-size:.72rem;color:#9ca3af">Total booked: ${tripPax.length} · Boarded: ${tripPax.filter(p=>p.boarded).length} · Generated: ${new Date().toLocaleString('en-KE')}</p>
+  <script>setTimeout(()=>window.print(),600)<\/script></body></html>`);
+  w.document.close();
+}
+
+function initMap(){
+  if(dMap){dMap.remove();dMap=null;}
+  const route=ROUTES.find(r=>r.id===driver.routeId)||{stops:[],color:'#00e87a'};
+  setTimeout(()=>{
+    dMap=L.map('driverMap',{center:[busPos.lat,busPos.lng],zoom:13,zoomControl:false,attributionControl:false});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(dMap);
+    L.control.zoom({position:'bottomright'}).addTo(dMap);
+    const ico=L.divIcon({html:`<div style="width:40px;height:40px;border-radius:50%;background:#06090e;border:3px solid ${route.color};display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 0 8px ${route.color}22">🚐</div>`,className:'',iconSize:[40,40],iconAnchor:[20,20]});
+    dBusMk=L.marker([busPos.lat,busPos.lng],{icon:ico}).addTo(dMap).bindPopup(`Driver: ${driver.name}<br>${driver.van}`).openPopup();
+    route.stops.forEach((s,i)=>{
+      const slat=busPos.lat+(i-1)*.006,slng=busPos.lng-(i*.005);
+      const si=L.divIcon({html:`<div style="width:20px;height:20px;border-radius:50%;background:#06090e;border:2px solid ${i<=curStop?route.color:'#4a5e7a'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:${i<=curStop?route.color:'#4a5e7a'}">${i+1}</div>`,className:'',iconSize:[20,20],iconAnchor:[10,10]});
+      L.marker([slat,slng],{icon:si}).addTo(dMap).bindPopup(`<strong>${s}</strong>${i<=curStop?' ✓':''}`);
+    });
+    const pts=route.stops.map((s,i)=>[busPos.lat+(i-1)*.006,busPos.lng-(i*.005)]);
+    if(pts.length>1)L.polyline(pts,{color:route.color,weight:3,opacity:.45,dashArray:'6 5'}).addTo(dMap);
+    renderStopProg();
+  },250);
+}
+
+function renderStopProg(){
+  const route=ROUTES.find(r=>r.id===driver.routeId)||{stops:[]};
+  const el=document.getElementById('stopProg');if(!el)return;
+  el.innerHTML=route.stops.map((s,i)=>`
+    <div class="sp-item ${i<curStop?'passed':i===curStop?'current':''}">
+      <div class="sp-dot">${i<curStop?'✓':i===curStop?'▶':i+1}</div>
+      <div class="sp-name">${s.split(' ')[0]}</div>
+    </div>`).join('');
+}
+
+function refreshMap(){if(dMap&&dBusMk){dMap.setView([busPos.lat,busPos.lng],13);dBusMk.setLatLng([busPos.lat,busPos.lng]);}renderStopProg();toast('Map refreshed');}
+
+async function loadEarnings(){
+  const trips=await getTrips(),today=new Date().toISOString().split('T')[0];
+  const myT=trips.filter(t=>t.driverId===driver.id&&t.status==='completed');
+  const todayT=myT.filter(t=>t.date===today);
+  const todayRev=todayT.reduce((s,t)=>s+(t.revenue||0),0);
+  const todayPax=todayT.reduce((s,t)=>s+(t.paxCount||0),0);
+  const ds=Math.round(todayRev*.7),cs=Math.round(todayRev*.3);
+  const g=id=>document.getElementById(id);
+  if(g('eTrips'))g('eTrips').textContent=todayT.length;
+  if(g('ePax'))g('ePax').textContent=todayPax;
+  if(g('eRev'))g('eRev').textContent='KSH '+todayRev.toLocaleString();
+  if(g('eGross'))g('eGross').textContent='KSH '+todayRev.toLocaleString();
+  if(g('eDrvr'))g('eDrvr').textContent='KSH '+ds.toLocaleString();
+  if(g('eCo'))g('eCo').textContent='KSH '+cs.toLocaleString();
+  if(g('eNet'))g('eNet').textContent='KSH '+ds.toLocaleString();
+  const pct=Math.min(100,Math.round((todayPax/24)*100));
+  if(g('gaugeArc'))g('gaugeArc').style.strokeDashoffset=251.2*(1-pct/100);
+  if(g('gaugePct'))g('gaugePct').textContent=pct+'%';
+  if(g('occBooked'))g('occBooked').textContent=todayPax+'/24';
+  if(g('occWalkin'))g('occWalkin').textContent=todayT.reduce((s,t)=>s+(t.walkins||0),0);
+  if(g('earnBreak'))g('earnBreak').innerHTML=todayT.length?todayT.map(t=>`<div class="earn-row"><span class="ek">Trip ${t.id.slice(-6)} · ${t.paxCount||0} pax</span><span class="ev ev-g">KSH ${(t.revenue||0).toLocaleString()}</span></div>`).join(''):`<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:.8rem">No completed trips today</div>`;
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],fk=[3200,4100,2800,4500,3900,5100,todayRev],mx=Math.max(...fk,1);
+  if(g('revChart'))g('revChart').innerHTML=fk.map((v,i)=>`<div class="bar-row"><span class="bar-lbl">${days[i]}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/mx*100)}%"></div></div><span class="bar-val">${(v/1000).toFixed(1)}K</span></div>`).join('');
+}
+
+async function loadFeedback(){
+  const all=(await dbG('feedback'))||[];
+  const avg=all.length?(all.reduce((s,f)=>s+f.rating,0)/all.length).toFixed(1):0;
+  const g=id=>document.getElementById(id);
+  if(g('myRating'))g('myRating').textContent=avg||'—';
+  if(g('myStars'))g('myStars').textContent=avg?'⭐'.repeat(Math.round(avg)):'Not rated yet';
+  if(g('ratingCount'))g('ratingCount').textContent=all.length?`${all.length} review${all.length>1?'s':''}`:' No reviews yet';
+  if(g('fbList'))g('fbList').innerHTML=all.length?all.slice().reverse().slice(0,15).map(f=>`
+    <div class="fb-item">
+      <div class="fb-stars">${'⭐'.repeat(f.rating)}${'<span style="opacity:.2">⭐</span>'.repeat(5-f.rating)} <span style="font-size:.75rem;font-weight:700;color:${f.rating>=4?'var(--green)':f.rating>=3?'var(--gold)':'var(--red)'}">${f.rating}/5</span></div>
+      ${f.comment?`<div class="fb-cmt">"${f.comment}"</div>`:''}
+      <div class="fb-meta">${f.name} · ${new Date(f.ts).toLocaleDateString('en-KE')}</div>
+    </div>`).join(''):`<div style="text-align:center;padding:2.5rem;color:var(--muted)">No reviews yet</div>`;
+}
+
+async function doVerify(){
+  const ref=document.getElementById('vRef').value.trim().toUpperCase();
+  if(!ref){toast('Enter a reference','error');return;}
+  const all=await getAllBk();const b=all.find(x=>x.id===ref||x.mpesaRef===ref);
+  const el=document.getElementById('vResult');
+  if(!b){
+    el.innerHTML=`<div class="card cbody" style="border-color:rgba(240,68,56,.3);text-align:center;padding:2rem"><div style="font-size:2.5rem;margin-bottom:.5rem">❌</div><div style="color:var(--red);font-weight:800;font-size:1rem;margin-bottom:.3rem">Booking Not Found</div><div style="font-size:.8rem;color:var(--muted)">No booking matches this reference. This may be a walk-in passenger.</div></div>`;return;
+  }
+  const route=ROUTES.find(r=>r.id===b.routeId)||{};
+  el.innerHTML=`<div class="card cbody" style="border-color:${b.status==='confirmed'?'rgba(0,232,122,.35)':'rgba(240,68,56,.3)'}">
+    <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:.9rem">
+      <div style="font-size:2.3rem">${b.status==='confirmed'?'✅':'❌'}</div>
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.05em;color:${b.status==='confirmed'?'var(--green)':'var(--red)'}">Booking ${b.status==='confirmed'?'VALID ✓':'INVALID'}</div>
+      <div style="font-family:monospace;font-size:.72rem;color:var(--muted)">${b.id}</div></div>
+    </div>
+    ${[['Passenger',b.name],['Phone',b.phone],['Seat','Seat '+b.seat],['Boarding Stop',b.boardingStop],['Route',route.name||'—'],['Fare Paid','KSH '+b.amount],['M-Pesa Code',b.mpesaRef],['Date',b.date],['Status',b.boarded?'✓ Already boarded':'Not yet boarded']].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span style="color:var(--muted)">${k}</span><span style="font-weight:700;color:${k==='Status'&&b.boarded?'var(--green)':k==='Status'?'var(--gold)':'var(--white)'}">${v}</span></div>`).join('')}
+    ${b.status==='confirmed'&&!b.boarded?`<button class="btn btn-g" style="margin-top:.9rem" onclick="quickBoard('${b.id}')">✓ Allow Boarding — Mark Boarded</button>`:''}
+    ${b.boarded?`<div style="text-align:center;padding:.8rem;color:var(--green);font-weight:700;margin-top:.5rem">✓ Valid boarding pass — seat confirmed</div>`:''}
+  </div>`;
+}
+
+async function quickBoard(id){
+  const all=await getAllBk();const i=all.findIndex(b=>b.id===id);
+  if(i>=0){all[i].boarded=true;await dbS('bookings',all);toast('✓ Passenger boarded successfully');doVerify();}
+}
+
+let tt;function toast(m,t=''){const e=document.getElementById('toast');e.textContent=m;e.className='toast show'+(t?' '+t:'');clearTimeout(tt);tt=setTimeout(()=>e.className='toast',3500);}
+
+checkAuth();
+</script>
+</body>
+</html>
