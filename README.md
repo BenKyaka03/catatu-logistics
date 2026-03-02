@@ -1,5 +1,3 @@
----
-
 # 🚀 CATATU Logistics Platform
 
 **CATATU Logistics** is a digital electric commuter transport platform designed to modernize urban mobility in Nairobi and beyond.
